@@ -9,18 +9,20 @@
 
 ## ✨ Features
 
-* **VS Code Experience, Locally**: Enjoy a feature-rich editing experience with syntax highlighting for dozens of languages, Prettier-based code formatting, and integrated search functionality, right in your browser.
+* **VS Code Experience, Locally**: Enjoy a feature-rich editing experience with syntax highlighting for dozens of languages, Prettier-based code formatting, integrated search, and full undo/redo support.
 * **Your Personal AI Code Architect**: Connects to your local Ollama instance to leverage powerful language models for a wide range of complex tasks:
     * **Deep Code Analysis**: Get detailed, step-by-step explanations of complex code.
     * **Intelligent Refactoring**: Automatically refactor code for readability, performance, and maintainability.
-    * **Proactive Debugging**: Analyze code for potential bugs, security vulnerabilities, and performance issues before they become a problem.
-    * **Automated Test Generation**: Create comprehensive unit tests to ensure your code is robust and reliable.
+    * **Proactive Debugging**: Analyze code for potential bugs, security vulnerabilities, and performance issues.
+    * **Automated Test Generation**: Create comprehensive unit tests to ensure your code is robust.
     * **Smart Commenting**: Intelligently add and explain comments to clarify your codebase.
-    * **Effortless Language Conversion**: Translate code snippets from one language to another with detailed explanations of the changes.
+    * **Effortless Language Conversion**: Translate code snippets from one language to another with detailed explanations.
 * **Conversational AI**: Use the interactive follow-up prompt to ask clarifying questions and dive deeper into the AI's suggestions without losing context.
-* **Visual Diff Checker**: Instantly see the changes suggested by the AI in a clear, side-by-side view before applying them to your code.
+* **Visual Diff Tracking**: Track your progress. The diff viewer shows a side-by-side comparison of your code before and after any edit, whether it's a manual change or an AI suggestion.
+* **Session History**: Never lose a good idea. The history panel saves your AI interactions, allowing you to revisit previous responses.
+* **Seamless File Management**: Open local files with the click of a button or by simply dragging and dropping them into the app.
 * **Ironclad Privacy**: Everything runs 100% locally. Your code is never sent to a third-party server, ensuring complete confidentiality.
-* **Developer-Friendly UI**: A clean, customizable interface with adjustable editor settings, tooltips, and a straightforward workflow.
+* **Developer-Friendly UI**: A clean, customizable interface with adjustable editor settings (font size, minimap), tooltips, and a straightforward workflow.
 
 ---
 
@@ -57,11 +59,11 @@
 ## 💻 How to Use
 
 1.  **Select a Model**: Choose an available Ollama model from the dropdown at the top of the screen.
-2.  **Write or Open Code**: Write code directly in the editor, paste it in, or use the "Open" button to load a local file.
+2.  **Write or Open Code**: Write code directly in the editor, paste it in, or use the "Open" button or drag-and-drop to load a local file.
 3.  **Choose an Action**: Use the buttons below the editor to perform an action on your code (e.g., "Explain", "Refactor", "Find Bugs").
 4.  **Review the Output**: The AI's response will stream into the output panel on the right. Code suggestions will include "Apply" and "Copy" buttons for easy use.
 5.  **Ask a Follow-up**: Use the input box at the bottom of the output panel to ask clarifying questions about the generated response.
-6.  **View Diffs**: When you "Apply" a change, the Diff panel will automatically show you a side-by-side comparison of the changes.
+6.  **View Diffs**: The Diff panel tracks your changes in real-time, showing a side-by-side comparison of your code before and after your latest edit.
 
 ---
 
