@@ -1,11 +1,36 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+// src/App.jsx
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Editor, { DiffEditor } from '@monaco-editor/react'
 import { marked } from 'marked'
 import Split from 'react-split'
 import { useStore, LANGS, DEMO, cx } from './store'
 
-// Vite proxy to local Ollama server
-const OLLAMA_BASE = '/ollama'
+// File Explorer Component
+const FileExplorer = ({ tree, onFileSelect }) => {
+    const renderTree = (node, path = '') => {
+        return Object.entries(node).sort(([a], [b]) => a.localeCompare(b)).map(([name, content]) => {
+            const currentPath = path ? `${path}/${name}` : name;
+            if (content._file) {
+                return (
+                    <div key={currentPath} className="pl-4">
+                        <button onClick={() => onFileSelect(content._file)} className="text-left w-full px-2 py-1 text-sm text-neutral-300 hover:bg-neutral-700 rounded-md">
+                            {name}
+                        </button>
+                    </div>
+                );
+            }
+            return (
+                <details key={currentPath} className="pl-4">
+                    <summary className="cursor-pointer px-2 py-1 text-sm text-neutral-200 font-medium">{name}</summary>
+                    {renderTree(content, currentPath)}
+                </details>
+            );
+        });
+    };
+
+    return <div className="p-2 overflow-y-auto h-full bg-panel rounded-xl border border-line">{renderTree(tree)}</div>;
+};
+
 
 // Main Application Component
 export default function App(){
@@ -14,6 +39,7 @@ export default function App(){
   // --- REFS ---
   const editorRef = useRef(null)
   const fileInputRef = useRef(null)
+  const folderInputRef = useRef(null) // New ref for folder input
   const outRef = useRef(null)
   const customPromptRef = useRef(null)
   const diffEditorRef = useRef(null)
@@ -87,11 +113,19 @@ export default function App(){
     const onLeaveDrop = (e) => {
       e.preventDefault()
       if(e.type === 'drop'){
-        const f = e.dataTransfer?.files?.[0]
-        if(f){
-          const r = new FileReader()
-          r.onload = () => store.updateEditorValue(String(r.result), true)
-          r.readAsText(f)
+        const items = e.dataTransfer?.items;
+        if (items) {
+            const entry = items[0].webkitGetAsEntry();
+            if (entry.isDirectory) {
+                handleFolderDrop(entry);
+            } else {
+                const f = e.dataTransfer?.files?.[0]
+                if(f){
+                  const r = new FileReader()
+                  r.onload = () => store.updateEditorValue(String(r.result), true)
+                  r.readAsText(f)
+                }
+            }
         }
       }
       overlay.style.display = 'none'
@@ -110,6 +144,14 @@ export default function App(){
 
   // --- PROMPT ENGINEERING ---
   function getPrompt(kind, _lang, code, toLang = 'python', custom = ''){
+    const { projectFiles, activeFilePath } = store;
+    
+    let context = '';
+    if (projectFiles.length > 1 && activeFilePath) {
+        const fileList = projectFiles.map(f => `- ${f.path}`).join('\n');
+        context = `The user has the following project structure:\n${fileList}\n\nThe user is currently focused on the file: \`${activeFilePath}\`.\n\n`;
+    }
+
     const bases = {
       explain: `Explain the following ${_lang} code. Break it down step-by-step. Use headings for different parts of the code (e.g., "Function Definition", "Main Logic", "Output"). Explain the purpose of each part and how they work together.`,
       pseudo:  `Rewrite the following ${_lang} code as clear, indented pseudocode. Use comments to clarify complex or non-obvious steps.`,
@@ -125,7 +167,7 @@ export default function App(){
     }
     const base = bases[kind] || 'Explain this code.'
     if (kind !== 'followup') {
-        return `${base}\n\n\`\`\`${_lang}\n${code}\n\`\`\``
+        return `${context}${base}\n\n\`\`\`${_lang}\n${code}\n\`\`\``
     }
     return base;
   }
@@ -171,6 +213,51 @@ export default function App(){
   }
 
   // --- FILE & APP MANAGEMENT ---
+  async function processDirectory(entry, path = '') {
+      let files = [];
+      if (entry.isFile) {
+          const file = await new Promise(resolve => entry.file(resolve));
+          const content = await file.text();
+          files.push({ path: `${path}${file.name}`, content });
+      } else if (entry.isDirectory) {
+          if (entry.name === 'node_modules') {
+              return []; // Ignore node_modules directories
+          }
+          const dirReader = entry.createReader();
+          const entries = await new Promise(resolve => dirReader.readEntries(resolve));
+          for (const subEntry of entries) {
+              const nestedFiles = await processDirectory(subEntry, `${path}${entry.name}/`);
+              files = files.concat(nestedFiles);
+          }
+      }
+      return files;
+  }
+
+  async function handleFolderDrop(entry) {
+      const files = await processDirectory(entry);
+      store.setProjectFiles(files);
+  }
+
+  async function onOpenFolder(e) {
+      const files = e.target.files;
+      if (!files) return;
+      const fileData = await Promise.all(Array.from(files)
+        .filter(file => !file.webkitRelativePath.includes('node_modules')) // Ignore node_modules
+        .map(file => {
+          return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve({
+                  path: file.webkitRelativePath,
+                  content: reader.result
+              });
+              reader.onerror = reject;
+              reader.readAsText(file);
+          });
+      }));
+      store.setProjectFiles(fileData);
+  }
+
+
   function onOpenFile(e){
     const file = e.target.files?.[0]
     if(!file) return
@@ -179,7 +266,7 @@ export default function App(){
       const newContent = String(reader.result);
       store.updateEditorValue(newContent, true)
       const ext = (file.name.split('.').pop()||'').toLowerCase()
-      const map = { js:'javascript', mjs:'javascript', ts:'typescript', py:'python', go:'go', rs:'rust', html:'html', htm:'html', css:'css', sql:'sql', c:'cpp', h:'cpp', cpp:'cpp', hpp:'cpp', cs:'csharp', java:'java', rb:'ruby', php:'php', sh:'shell', bash:'shell', yaml:'yaml', yml:'yaml', json:'json', xml:'xml' }
+      const map = { js:'javascript', jsx: 'javascript', mjs:'javascript', ts:'typescript', py:'python', go:'go', rs:'rust', html:'html', htm:'html', css:'css', sql:'sql', c:'cpp', h:'cpp', cpp:'cpp', hpp:'cpp', cs:'csharp', java:'java', rb:'ruby', php:'php', sh:'shell', bash:'shell', yaml:'yaml', yml:'yaml', json:'json', xml:'xml' }
       store.setLang(map[ext] || 'javascript')
     }
     reader.readAsText(file)
@@ -205,9 +292,11 @@ export default function App(){
   return (
     <div className="h-screen flex flex-col bg-bg text-ink">
       <input type="file" ref={fileInputRef} onChange={onOpenFile} className="hidden" />
+      <input type="file" ref={folderInputRef} onChange={onOpenFolder} className="hidden" multiple webkitdirectory="" />
+      
       <div id="dropOverlay" className="fixed inset-0 hidden items-center justify-center z-50 bg-panel/80 border-2 border-dashed border-line">
         <div className="text-center">
-          <div className="text-2xl font-semibold">Drop a file to open</div>
+          <div className="text-2xl font-semibold">Drop a file or folder to open</div>
           <div className="text-sm text-muted mt-2">Your code stays on your machine.</div>
         </div>
       </div>
@@ -279,7 +368,8 @@ export default function App(){
       </header>
 
       <main className="flex-1 w-full p-4 overflow-hidden">
-        <Split className="flex h-full" sizes={[65, 35]} minSize={300} gutterSize={10}>
+        <Split className="flex h-full" sizes={[20, 45, 35]} minSize={[150, 300, 300]} gutterSize={10}>
+            {store.projectFiles.length > 0 ? <FileExplorer tree={store.fileTree} onFileSelect={store.setActiveFile} /> : <div className="bg-panel rounded-xl border border-line flex items-center justify-center text-muted">Open a folder to see files</div>}
             <div className="flex flex-col h-full rounded-xl border border-line bg-panel overflow-visible">
                 <Split direction="vertical" sizes={[70, 30]} minSize={100} className="h-full flex flex-col">
                     <section className="flex flex-col h-full">
@@ -287,7 +377,8 @@ export default function App(){
                         <select value={store.lang} onChange={e=>store.setLang(e.target.value)} className="bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 text-sm">
                           {LANGS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
                         </select>
-                        <span className="tooltip-wrapper" data-tooltip="Open a local file"><button onClick={()=>fileInputRef.current?.click()} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Open</button></span>
+                        <span className="tooltip-wrapper" data-tooltip="Open a local file"><button onClick={()=>fileInputRef.current?.click()} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Open File</button></span>
+                        <span className="tooltip-wrapper" data-tooltip="Open a local folder"><button onClick={()=>folderInputRef.current?.click()} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Open Folder</button></span>
                         <span className="tooltip-wrapper" data-tooltip="Save the current code"><button onClick={saveFile} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Save</button></span>
                         <span className="tooltip-wrapper" data-tooltip="Search in code (Ctrl+F)"><button onClick={findInCode} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Search</button></span>
                         <span className="tooltip-wrapper" data-tooltip="Format code (Prettier)"><button onClick={formatCode} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Format</button></span>

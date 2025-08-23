@@ -1,3 +1,4 @@
+// src/store.js
 import { create } from 'zustand'
 
 // Utility for conditional class names
@@ -6,6 +7,7 @@ export const cx = (...s) => s.filter(Boolean).join(' ')
 // Supported languages for the editor
 export const LANGS = [
   { id: 'javascript', label: 'JavaScript' },
+  { id: 'jsx', label: 'JSX' },
   { id: 'typescript', label: 'TypeScript' },
   { id: 'python', label: 'Python' },
   { id: 'go', label: 'Go' },
@@ -27,10 +29,25 @@ export const LANGS = [
 // Demo code for each language
 export const DEMO = {
     javascript: `// Welcome to BasedSyntax!
+// You can open a single file or a whole folder.
 function factorial(n) {
   return n ? n * factorial(n - 1) : 1;
 }
 console.log(factorial(5)); // 120`,
+    jsx: `import React, { useState } from 'react';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>You clicked {count} times</p>
+      <button onClick={() => setCount(count + 1)}>
+        Click me
+      </button>
+    </div>
+  );
+}`,
     typescript: `type User = { id: number; name: string; }; function getUser(id: number): User { return { id, name: \`User \${id}\` }; }`,
     python: `def fib(n):\n    a, b = 0, 1\n    while a < n:\n        print(a, end=' ')\n        a, b = b, a + b\n    print()\nfib(50)`,
     rust: `fn main() {\n    println!("Hello, Rust!");\n}`,
@@ -48,6 +65,22 @@ console.log(factorial(5)); // 120`,
     json: `{\n    "greeting": "Hello, JSON!"\n}`,
     xml: `<note><to>User</to><from>BasedSyntax</from><body>Hello, XML!</body></note>`
 }
+
+const buildFileTree = (files) => {
+    const tree = {};
+    files.forEach(file => {
+        const parts = file.path.split('/');
+        let currentLevel = tree;
+        parts.forEach((part, index) => {
+            if (!currentLevel[part]) {
+                currentLevel[part] = index === parts.length - 1 ? { _file: file } : {};
+            }
+            currentLevel = currentLevel[part];
+        });
+    });
+    return tree;
+};
+
 
 export const useStore = create((set, get) => ({
   // --- STATE ---
@@ -76,6 +109,10 @@ export const useStore = create((set, get) => ({
   followUp: '',
   lastPrompt: null,
   error: null,
+  // New state for folder context
+  projectFiles: [],
+  fileTree: {},
+  activeFilePath: null,
 
   // --- ACTIONS ---
   
@@ -101,9 +138,37 @@ export const useStore = create((set, get) => ({
     localStorage.setItem('basedsyntax:model', model);
   },
   setLang: (lang) => {
-    set({ lang, currentCode: DEMO[lang] || '' });
+    const { activeFilePath } = get();
+    // Only switch to demo code if we're not in a project context
+    if (!activeFilePath) {
+        set({ lang, currentCode: DEMO[lang] || '' });
+    } else {
+        set({ lang });
+    }
     localStorage.setItem('basedsyntax:lang', lang);
   },
+
+  // Project and File Actions
+  setProjectFiles: (files) => {
+    const fileTree = buildFileTree(files);
+    set({ projectFiles: files, fileTree });
+    // Automatically open the first file if available
+    if (files.length > 0) {
+        get().setActiveFile(files[0]);
+    }
+  },
+
+  setActiveFile: (file) => {
+    const ext = (file.path.split('.').pop()||'').toLowerCase();
+    const map = { js:'javascript', jsx: 'javascript', mjs:'javascript', ts:'typescript', py:'python', go:'go', rs:'rust', html:'html', htm:'html', css:'css', sql:'sql', c:'cpp', h:'cpp', cpp:'cpp', hpp:'cpp', cs:'csharp', java:'java', rb:'ruby', php:'php', sh:'shell', bash:'shell', yaml:'yaml', yml:'yaml', json:'json', xml:'xml' };
+    
+    set({
+        activeFilePath: file.path,
+        lang: map[ext] || 'plaintext',
+    });
+    get().updateEditorValue(file.content, true);
+  },
+
 
   // Editor Actions
   setCurrentCode: (code) => set({ currentCode: code }),
