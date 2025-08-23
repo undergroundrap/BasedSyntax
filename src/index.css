@@ -11,7 +11,11 @@
   --accent: #3b82f6;
 }
 html, body, #root { height: 100%; }
-body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+body { 
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  /* Add this line to hide scrollbars on the main body */
+  overflow: hidden;
+}
 
 /* --- Enhanced Markdown Styles --- */
 .md h1, .md h2, .md h3 {
