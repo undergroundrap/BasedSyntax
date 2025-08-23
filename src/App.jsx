@@ -4,7 +4,7 @@ import Editor, { DiffEditor } from '@monaco-editor/react'
 import { marked } from 'marked'
 import Split from 'react-split'
 import { useStore, LANGS, DEMO, cx } from './store'
-import { FileIcon, FolderIcon, FileTextIcon, FileCode2Icon, FileJsonIcon, FileTypeIcon, FileQuestionIcon } from 'lucide-react'
+import { FileIcon, FolderIcon, FileTextIcon, FileCode2Icon, FileJsonIcon, FileTypeIcon, FileQuestionIcon, FileStackIcon } from 'lucide-react'
 
 // File Explorer Component
 const FileExplorer = ({ tree, onFileSelect }) => {
@@ -18,36 +18,51 @@ const FileExplorer = ({ tree, onFileSelect }) => {
             case 'tsx':
             case 'mjs':
             case 'cjs':
-            case 'json':
-            case 'html':
-            case 'css':
             case 'py':
             case 'go':
             case 'rs':
-            case 'sql':
+            case 'swift':
+            case 'kt':
+            case 'r':
+            case 'scala':
+            case 'ex':
             case 'cpp':
-            case 'csharp':
+            case 'c':
+            case 'h':
+            case 'hpp':
+            case 'cs':
             case 'java':
             case 'ruby':
+            case 'rb':
             case 'php':
             case 'sh':
             case 'bash':
-            case 'yaml':
-            case 'yml':
-            case 'xml':
                 return <FileCode2Icon className="w-4 h-4 text-neutral-400" />;
+            case 'json':
+                return <FileJsonIcon className="w-4 h-4 text-neutral-400" />;
+            case 'html':
+            case 'vue':
+            case 'svelte':
+                return <FileTextIcon className="w-4 h-4 text-neutral-400" />;
+            case 'css':
+                return <FileTypeIcon className="w-4 h-4 text-neutral-400" />;
             case 'md':
             case 'txt':
             case 'gitignore':
             case 'LICENSE':
             case 'README':
                 return <FileTextIcon className="w-4 h-4 text-neutral-400" />;
+            case 'yaml':
+            case 'yml':
+            case 'xml':
+                return <FileStackIcon className="w-4 h-4 text-neutral-400" />;
             default:
                 return <FileIcon className="w-4 h-4 text-neutral-400" />;
         }
     };
 
     const renderTree = (node, path = '') => {
+        const store = useStore();
         return Object.entries(node)
             .sort(([aName, aContent], [bName, bContent]) => {
                 // Sort directories first, then files
@@ -153,7 +168,7 @@ export default function App(){
         const code = target.closest('.code-container').querySelector('code').innerText;
 
         if (action === 'copy') {
-          navigator.clipboard.writeText(code);
+          document.execCommand('copy');
           target.innerText = 'Copied!';
           setTimeout(() => { target.innerText = 'Copy' }, 2000);
         } else if (action === 'apply') {
@@ -231,6 +246,7 @@ export default function App(){
       comments: `Add comments to the following ${_lang} code. First, provide the full, commented code block. After the code block, add a "Comment Explanations" heading and use a list to explain why each significant comment was added.`,
       complexity: `Analyze the time and space complexity (Big O notation) of this code. Explain your reasoning for each.`,
       convert: `Convert the following ${_lang} code to ${toLang}. Provide the converted code in a markdown block. Afterwards, under a "Conversion Notes" heading, explain the key syntactical and logical changes made during the conversion.`,
+      lint: `Act as a senior developer and perform a comprehensive static analysis (lint) of the following ${_lang} code. Identify any style violations, potential errors, or bad practices. Provide your findings in a clear, formatted list. For each item, describe the problem and suggest a corrected code snippet.`,
       custom: custom,
       followup: `The user provided the following code:\n\n\`\`\`${_lang}\n${code}\n\`\`\`\n\nYou provided this response:\n\n---\n${prevResponse}\n---\n\nNow, answer this follow-up question: ${custom}`
     }
@@ -335,7 +351,8 @@ export default function App(){
       const newContent = String(reader.result);
       store.updateEditorValue(newContent, true)
       const ext = (file.name.split('.').pop()||'').toLowerCase()
-      const map = { js:'javascript', jsx: 'javascript', mjs:'javascript', ts:'typescript', py:'python', go:'go', rs:'rust', html:'html', htm:'html', css:'css', sql:'sql', c:'cpp', h:'cpp', cpp:'cpp', hpp:'cpp', cs:'csharp', java:'java', ruby:'rb', php:'php', sh:'shell', bash:'shell', yaml:'yaml', yml:'yaml', json:'json', xml:'xml' }
+      // Updated mapping to support new languages
+      const map = { js:'javascript', jsx: 'javascript', mjs:'javascript', ts:'typescript', py:'python', go:'go', rs:'rust', html:'html', htm:'html', css:'css', sql:'sql', c:'cpp', h:'cpp', cpp:'cpp', hpp:'cpp', cs:'csharp', java:'java', rb:'ruby', php:'php', sh:'shell', bash:'shell', yaml:'yaml', yml:'yaml', json:'json', xml:'xml', swift:'swift', kt:'kotlin', r:'r', scala:'scala', ex:'elixir', md:'markdown', vue:'vue', svelte:'svelte' }
       store.setLang(map[ext] || 'javascript')
     }
     reader.readAsText(file)
@@ -343,7 +360,10 @@ export default function App(){
 
   function saveFile(){
     const code = editorRef.current?.getValue() || ''
-    const ext = {javascript:'js', typescript:'ts', python:'py', go:'go', rust:'rs', html:'html', css:'css', sql:'sql', cpp:'cpp', csharp:'cs', java:'java', ruby:'rb', php:'php', shell:'sh', yaml:'yml', json:'json', xml:'xml'}[store.lang] || 'txt'
+    // Updated extension mapping for new languages
+    const ext = {
+      javascript:'js', typescript:'ts', python:'py', go:'go', rust:'rs', html:'html', css:'css', sql:'sql', cpp:'cpp', csharp:'cs', java:'java', ruby:'rb', php:'php', shell:'sh', yaml:'yml', json:'json', xml:'xml', swift:'swift', kotlin:'kt', r:'r', scala:'scala', elixir:'ex', markdown:'md', vue:'vue', svelte:'svelte'
+    }[store.lang] || 'txt'
     const blob = new Blob([code], { type: 'text/plain' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -507,6 +527,7 @@ export default function App(){
                             <span className="tooltip-wrapper" data-tooltip="Suggest improvements to the code"><button onClick={()=>doAction('refactor')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Refactor</button></span>
                             <span className="tooltip-wrapper" data-tooltip="Add and explain comments"><button onClick={()=>doAction('comments')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Add Comments</button></span>
                             <span className="tooltip-wrapper" data-tooltip="Analyze time and space complexity"><button onClick={()=>doAction('complexity')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Complexity</button></span>
+                            <span className="tooltip-wrapper" data-tooltip="Lint the code for style and errors"><button onClick={()=>doAction('lint')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Lint</button></span>
                             <div className="tooltip-wrapper" data-tooltip="Translate code to another language">
                                 <div className="flex items-center gap-2">
                                     <button onClick={()=>store.setShowLangConvert(!store.showLangConvert)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Convert Language</button>
@@ -578,7 +599,7 @@ export default function App(){
                   {store.streaming && (
                     <button onClick={store.stopStream} className="bg-red-700 border border-red-600 rounded-md px-3 py-2 text-sm hover:bg-red-600">Stop</button>
                   )}
-                  <button onClick={() => navigator.clipboard.writeText(store.rawOut)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Copy</button>
+                  <button onClick={() => document.execCommand('copy')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Copy</button>
                 </div>
               </div>
               <div ref={outRef} className="p-4 text-ink space-y-2 overflow-auto flex-1 md" dangerouslySetInnerHTML={{__html: store.out}} />

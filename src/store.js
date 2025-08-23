@@ -5,6 +5,7 @@ import { create } from 'zustand'
 export const cx = (...s) => s.filter(Boolean).join(' ')
 
 // Supported languages for the editor
+// A comprehensive list including new additions
 export const LANGS = [
   { id: 'javascript', label: 'JavaScript' },
   { id: 'jsx', label: 'JSX' },
@@ -24,6 +25,14 @@ export const LANGS = [
   { id: 'yaml', label: 'YAML' },
   { id: 'json', label: 'JSON' },
   { id: 'xml', label: 'XML' },
+  { id: 'swift', label: 'Swift' }, // New language
+  { id: 'kotlin', label: 'Kotlin' }, // New language
+  { id: 'r', label: 'R' }, // New language
+  { id: 'scala', label: 'Scala' }, // New language
+  { id: 'elixir', label: 'Elixir' }, // New language
+  { id: 'markdown', label: 'Markdown' }, // New language
+  { id: 'vue', label: 'Vue' }, // New language
+  { id: 'svelte', label: 'Svelte' }, // New language
 ]
 
 // Demo code for each language
@@ -63,7 +72,15 @@ function Counter() {
     shell: `echo "Hello, Shell!"`,
     yaml: `user:\n  name: Ocean\n  role: developer`,
     json: `{\n    "greeting": "Hello, JSON!"\n}`,
-    xml: `<note><to>User</to><from>BasedSyntax</from><body>Hello, XML!</body></note>`
+    xml: `<note><to>User</to><from>BasedSyntax</from><body>Hello, XML!</body></note>`,
+    swift: `import Foundation\n\nprint("Hello, Swift!")`, // New demo
+    kotlin: `fun main() {\n  println("Hello, Kotlin!")\n}`, // New demo
+    r: `message <- "Hello, R!"\nprint(message)`, // New demo
+    scala: `object HelloWorld {\n  def main(args: Array[String]): Unit = {\n    println("Hello, Scala!")\n  }\n}`, // New demo
+    elixir: `IO.puts "Hello, Elixir!"`, // New demo
+    markdown: `# Hello, Markdown!\n\nThis is a simple paragraph.\n\n- List item 1\n- List item 2\n\n\`\`\`javascript\nconsole.log("hello");\n\`\`\``, // New demo
+    vue: `<template>\n  <h1>{{ message }}</h1>\n</template>\n\n<script>\nexport default {\n  data() {\n    return {\n      message: 'Hello, Vue!'\n    }\n  }\n}\n</script>`, // New demo
+    svelte: `<script>\n  let message = 'Hello, Svelte!';\n</script>\n\n<h1>{message}</h1>`, // New demo
 }
 
 const buildFileTree = (files) => {
@@ -160,7 +177,7 @@ export const useStore = create((set, get) => ({
 
   setActiveFile: (file) => {
     const ext = (file.path.split('.').pop()||'').toLowerCase();
-    const map = { js:'javascript', jsx: 'javascript', mjs:'javascript', ts:'typescript', py:'python', go:'go', rs:'rust', html:'html', htm:'html', css:'css', sql:'sql', c:'cpp', h:'cpp', cpp:'cpp', hpp:'cpp', cs:'csharp', java:'java', rb:'ruby', php:'php', sh:'shell', bash:'shell', yaml:'yaml', yml:'yaml', json:'json', xml:'xml' };
+    const map = { js:'javascript', jsx: 'javascript', mjs:'javascript', ts:'typescript', py:'python', go:'go', rs:'rust', html:'html', htm:'html', css:'css', sql:'sql', c:'cpp', h:'cpp', cpp:'cpp', hpp:'cpp', cs:'csharp', java:'java', rb:'ruby', php:'php', sh:'shell', bash:'shell', yaml:'yaml', yml:'yaml', json:'json', xml:'xml', swift:'swift', kt:'kotlin', r:'r', scala:'scala', ex:'elixir', md:'markdown', vue:'vue', svelte:'svelte' };
     
     set({
         activeFilePath: file.path,
