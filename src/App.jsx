@@ -80,7 +80,6 @@ export default function App(){
   const [currentCode, setCurrentCode] = useState(DEMO.javascript);
   const [diffContent, setDiffContent] = useState({ original: DEMO.javascript, modified: DEMO.javascript });
   const [editorStats, setEditorStats] = useState({ chars: 0, lines: 0 });
-  // NEW: State for follow-up questions
   const [followUp, setFollowUp] = useState('');
   const [lastPrompt, setLastPrompt] = useState(null);
 
@@ -103,7 +102,7 @@ export default function App(){
         <div class="code-container">
           <div class="code-actions">
             <span class="text-xs text-neutral-400 pr-2">${validLang}</span>
-            <button class="code-btn" data-tooltip="Apply this code to the editor" data-action="apply">Apply</button>
+            <button class="code-btn" data-lang="${validLang}" data-tooltip="Apply this code to the editor" data-action="apply">Apply</button>
             <button class="code-btn" data-tooltip="Copy code to clipboard" data-action="copy">Copy</button>
           </div>
           <pre><code class="hljs language-${validLang}">${highlightedCode}</code></pre>
@@ -130,6 +129,10 @@ export default function App(){
           target.innerText = 'Copied!';
           setTimeout(() => { target.innerText = 'Copy' }, 2000);
         } else if (action === 'apply') {
+          const language = target.dataset.lang;
+          if (language && LANGS.some(l => l.id === language)) {
+            setLang(language);
+          }
           updateEditorValue(code, true);
           target.innerText = 'Applied!';
           setActiveTab('diff');
@@ -227,7 +230,6 @@ export default function App(){
       complexity: `Analyze the time and space complexity (Big O notation) of this code. Explain your reasoning for each.`,
       convert: `Convert the following ${_lang} code to ${toLang}. Provide the converted code in a markdown block. Afterwards, under a "Conversion Notes" heading, explain the key syntactical and logical changes made during the conversion.`,
       custom: custom,
-      // NEW: Prompt for follow-up questions
       followup: `The user provided the following code:\n\n\`\`\`${_lang}\n${code}\n\`\`\`\n\nYou provided this response:\n\n---\n${rawOut}\n---\n\nNow, answer this follow-up question: ${custom}`
     }
     const base = bases[kind] || 'Explain this code.'
@@ -281,7 +283,7 @@ export default function App(){
       }
       if (saveToHistory) {
         setConversationHistory(prev => [{ prompt: thePrompt, response: full }, ...prev])
-        setLastPrompt(thePrompt); // Save the last main prompt
+        setLastPrompt(thePrompt);
       }
     }catch(err){
       setOut(`<p class="text-red-300">Error: ${err.message}</p>`)
@@ -345,13 +347,12 @@ export default function App(){
     streamGenerate(getPrompt(kind, lang, text, toLang, custom))
   }
 
-  // NEW: Handle follow-up questions
   function handleFollowUp(e) {
     e.preventDefault();
     if (!followUp.trim() || !rawOut.trim()) return;
     const code = editorRef.current?.getValue() || '';
     const prompt = getPrompt('followup', lang, code, null, followUp);
-    streamGenerate(prompt, false); // Don't save to main history
+    streamGenerate(prompt, false);
     setFollowUp('');
   }
 
@@ -407,6 +408,7 @@ export default function App(){
   // --- RENDER ---
   return (
     <div className="h-screen flex flex-col bg-bg text-ink">
+      <input type="file" ref={fileInputRef} onChange={onOpenFile} className="hidden" />
       <div id="dropOverlay" className="fixed inset-0 hidden items-center justify-center z-50 bg-panel/80 border-2 border-dashed border-line">
         <div className="text-center">
           <div className="text-2xl font-semibold">Drop a file to open</div>
@@ -461,19 +463,19 @@ export default function App(){
         </div>
       )}
 
-      <header className="w-full border-b border-line bg-panel">
+      <header className="w-full border-b border-line bg-panel z-20 relative">
         <div className="px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
             <div className="text-lg font-bold">BasedSyntax</div>
             <div className={cx('text-xs px-2 py-1 rounded-full border', statusClass)}>{status}</div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="tooltip-wrapper"><button data-tooltip="Settings" onClick={() => setShowSettings(true)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Settings</button></span>
+            <span className="tooltip-wrapper tooltip-bottom" data-tooltip="Settings"><button onClick={() => setShowSettings(true)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Settings</button></span>
             <select value={model} onChange={e=>setModel(e.target.value)} className="flex-1 sm:flex-none bg-neutral-900 border border-neutral-700 rounded-md px-3 py-2 text-sm">
               <option value="">Select Ollama model</option>
               {models.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
-            <span className="tooltip-wrapper"><button onClick={()=>{checkHealth(); loadModels();}} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Refresh</button></span>
+            <span className="tooltip-wrapper tooltip-bottom" data-tooltip="Refresh model list"><button onClick={()=>{checkHealth(); loadModels();}} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Refresh</button></span>
           </div>
         </div>
         {tip && (<div className="px-4 pb-2 text-xs text-muted">{tip}</div>)}
@@ -481,25 +483,22 @@ export default function App(){
 
       <main className="flex-1 w-full p-4 overflow-hidden">
         <Split className="flex h-full" sizes={[65, 35]} minSize={300} gutterSize={10}>
-            {/* Left Panel: Editor + History/Diff */}
-            <div className="flex flex-col h-full rounded-xl border border-line overflow-hidden bg-panel">
+            <div className="flex flex-col h-full rounded-xl border border-line bg-panel overflow-visible">
                 <Split direction="vertical" sizes={[70, 30]} minSize={100} className="h-full flex flex-col">
-                    {/* Top-Left: Code Editor & Commands */}
-                    <section className="flex flex-col overflow-hidden h-full">
-                      <div className="flex flex-wrap items-center gap-2 p-2 bg-neutral-900 border-b border-line">
+                    <section className="flex flex-col h-full">
+                      <div className="flex flex-wrap items-center gap-2 p-2 bg-neutral-900 border-b border-line relative z-10">
                         <select value={lang} onChange={e=>handleLangChange(e.target.value)} className="bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 text-sm">
                           {LANGS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
                         </select>
-                        {/* UPDATED: Buttons wrapped for tooltip fix */}
-                        <span className="tooltip-wrapper"><button data-tooltip="Open a local file" onClick={()=>fileInputRef.current?.click()} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Open</button></span>
-                        <span className="tooltip-wrapper"><button data-tooltip="Save the current code" onClick={saveFile} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Save</button></span>
-                        <span className="tooltip-wrapper"><button data-tooltip="Search in code (Ctrl+F)" onClick={findInCode} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Search</button></span>
-                        <span className="tooltip-wrapper"><button data-tooltip="Format code (Prettier)" onClick={formatCode} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Format</button></span>
+                        <span className="tooltip-wrapper" data-tooltip="Open a local file"><button onClick={()=>fileInputRef.current?.click()} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Open</button></span>
+                        <span className="tooltip-wrapper" data-tooltip="Save the current code"><button onClick={saveFile} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Save</button></span>
+                        <span className="tooltip-wrapper" data-tooltip="Search in code (Ctrl+F)"><button onClick={findInCode} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Search</button></span>
+                        <span className="tooltip-wrapper" data-tooltip="Format code (Prettier)"><button onClick={formatCode} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Format</button></span>
                         <div className="flex-1" />
                         <div className="text-xs text-muted px-2">{editorStats.chars} chars · {editorStats.lines} lines</div>
-                        <span className="tooltip-wrapper"><button data-tooltip="Undo last change" onClick={undo} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50" disabled={editorHistory.length === 0}>Undo</button></span>
-                        <span className="tooltip-wrapper"><button data-tooltip="Redo last change" onClick={redo} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50" disabled={editorRedoStack.length === 0}>Redo</button></span>
-                        <span className="tooltip-wrapper"><button data-tooltip="Clear the editor" onClick={()=>updateEditorValue('', true)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Clear</button></span>
+                        <span className="tooltip-wrapper" data-tooltip="Undo last change"><button onClick={undo} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50" disabled={editorHistory.length === 0}>Undo</button></span>
+                        <span className="tooltip-wrapper" data-tooltip="Redo last change"><button onClick={redo} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50" disabled={editorRedoStack.length === 0}>Redo</button></span>
+                        <span className="tooltip-wrapper" data-tooltip="Clear the editor"><button onClick={()=>updateEditorValue('', true)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Clear</button></span>
                       </div>
                       <div className="flex-1 relative">
                         <Editor
@@ -525,29 +524,31 @@ export default function App(){
                       </div>
                       <div className="flex flex-col items-center gap-2 p-2 border-t border-line bg-neutral-900">
                         <div className="flex flex-wrap justify-center gap-2">
-                          <button data-tooltip="Explain the code step-by-step" onClick={()=>doAction('explain')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Explain</button>
-                          <button data-tooltip="Rewrite as pseudocode" onClick={()=>doAction('pseudo')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Pseudocode</button>
-                          <button data-tooltip="Explain it like I'm 10" onClick={()=>doAction('eli10')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>ELI10</button>
-                          <button data-tooltip="Generate unit tests" onClick={()=>doAction('tests')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Gen Tests</button>
-                          <button data-tooltip="Find potential bugs and issues" onClick={()=>doAction('bugs')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Find Bugs</button>
+                          <span className="tooltip-wrapper" data-tooltip="Explain the code step-by-step"><button onClick={()=>doAction('explain')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Explain</button></span>
+                          <span className="tooltip-wrapper" data-tooltip="Rewrite as pseudocode"><button onClick={()=>doAction('pseudo')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Pseudocode</button></span>
+                          <span className="tooltip-wrapper" data-tooltip="Explain it like I'm 10"><button onClick={()=>doAction('eli10')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>ELI10</button></span>
+                          <span className="tooltip-wrapper" data-tooltip="Generate unit tests"><button onClick={()=>doAction('tests')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Gen Tests</button></span>
+                          <span className="tooltip-wrapper" data-tooltip="Find potential bugs and issues"><button onClick={()=>doAction('bugs')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Find Bugs</button></span>
                         </div>
                         <div className="flex flex-wrap justify-center items-center gap-2">
-                            <button data-tooltip="Suggest improvements to the code" onClick={()=>doAction('refactor')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Refactor</button>
-                            <button data-tooltip="Add and explain comments" onClick={()=>doAction('comments')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Add Comments</button>
-                            <button data-tooltip="Analyze time and space complexity" onClick={()=>doAction('complexity')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Complexity</button>
-                            <div className="flex items-center gap-2">
-                                <button data-tooltip="Translate code to another language" onClick={()=>setShowLangConvert(!showLangConvert)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Convert Language</button>
-                                {showLangConvert && (
-                                    <select onChange={e=>doAction('convert', e.target.value)} className="bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 text-sm">
-                                        <option>Select Language</option>
-                                        {LANGS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
-                                    </select>
-                                )}
+                            <span className="tooltip-wrapper" data-tooltip="Suggest improvements to the code"><button onClick={()=>doAction('refactor')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Refactor</button></span>
+                            <span className="tooltip-wrapper" data-tooltip="Add and explain comments"><button onClick={()=>doAction('comments')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Add Comments</button></span>
+                            <span className="tooltip-wrapper" data-tooltip="Analyze time and space complexity"><button onClick={()=>doAction('complexity')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Complexity</button></span>
+                            <div className="tooltip-wrapper" data-tooltip="Translate code to another language">
+                                <div className="flex items-center gap-2">
+                                    <button onClick={()=>setShowLangConvert(!showLangConvert)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={streaming}>Convert Language</button>
+                                    {showLangConvert && (
+                                        <select onChange={e=>doAction('convert', e.target.value)} className="bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 text-sm">
+                                            <option>Select Language</option>
+                                            {LANGS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
+                                        </select>
+                                    )}
+                                </div>
                             </div>
                         </div>
                         <div className="flex flex-wrap justify-center gap-2">
-                            <button data-tooltip="Explain only the selected code" onClick={()=>doAction('explain-selection')} className="bg-green-600/80 border border-green-500 rounded-md px-3 py-2 hover:bg-green-500 disabled:opacity-50" disabled={streaming}>Explain Selection</button>
-                            <button data-tooltip="Write your own prompt" onClick={()=>setShowCustomPrompt(true)} className="bg-accent border border-blue-500 rounded-md px-3 py-2 hover:bg-blue-500 disabled:opacity-50" disabled={streaming}>Custom Prompt</button>
+                            <span className="tooltip-wrapper" data-tooltip="Explain only the selected code"><button onClick={()=>doAction('explain-selection')} className="bg-green-600/80 border border-green-500 rounded-md px-3 py-2 hover:bg-green-500 disabled:opacity-50" disabled={streaming}>Explain Selection</button></span>
+                            <span className="tooltip-wrapper" data-tooltip="Write your own prompt"><button onClick={()=>setShowCustomPrompt(true)} className="bg-accent border border-blue-500 rounded-md px-3 py-2 hover:bg-blue-500 disabled:opacity-50" disabled={streaming}>Custom Prompt</button></span>
                         </div>
                       </div>
                     </section>
@@ -608,7 +609,6 @@ export default function App(){
                 </div>
               </div>
               <div ref={outRef} className="p-4 text-ink space-y-2 overflow-auto flex-1 md" dangerouslySetInnerHTML={{__html: out}} />
-              {/* NEW: Follow-up question form */}
               {rawOut && !streaming && (
                 <div className="p-2 border-t border-line">
                     <form onSubmit={handleFollowUp}>
