@@ -21,10 +21,10 @@ export const LANGS = [
   { id: 'ruby', label: 'Ruby', aliases: ['ruby', 'rb'] },
   { id: 'php', label: 'PHP', aliases: ['php'] },
   { id: 'shell', label: 'Shell', aliases: ['sh', 'bash', 'zsh'] },
-  { id: 'yaml', label: 'YAML', aliases: ['yaml', 'yml'] },
+  { id: 'yaml-lang', label: 'YAML', aliases: ['yaml', 'yml'] },
   { id: 'json', label: 'JSON', aliases: ['json'] },
   { id: 'xml', label: 'XML', aliases: ['xml'] },
-  { id: 'swift', label: 'Swift', aliases: ['swift'] },
+  { id: 'swift-lang', label: 'Swift', aliases: ['swift'] },
   { id: 'kotlin', label: 'Kotlin', aliases: ['kt', 'kts'] },
   { id: 'r', label: 'R', aliases: ['r'] },
   { id: 'scala', label: 'Scala', aliases: ['scala', 'sc'] },
@@ -53,11 +53,9 @@ export const LANGS = [
   { id: 'shader', label: 'GLSL', aliases: ['glsl', 'vert', 'frag'] },
   { id: 'solidity', label: 'Solidity', aliases: ['sol'] },
   { id: 'stylus', label: 'Stylus', aliases: ['styl'] },
-  { id: 'swift', label: 'Swift', aliases: ['swift'] },
   { id: 'v', label: 'V', aliases: ['v'] },
   { id: 'vb', label: 'Visual Basic', aliases: ['vb', 'bas'] },
   { id: 'wasm', label: 'WebAssembly', aliases: ['wasm'] },
-  { id: 'yaml', label: 'YAML', aliases: ['yaml', 'yml'] },
   { id: 'plaintext', label: 'Plain Text', aliases: ['txt'] }
 ];
 
@@ -76,10 +74,10 @@ export const LANGUAGE_COLORS = {
   ruby: 'text-red-500',
   php: 'text-indigo-500',
   shell: 'text-neutral-400',
-  yaml: 'text-green-400',
+  'yaml-lang': 'text-green-400',
   json: 'text-cyan-400',
   xml: 'text-lime-400',
-  swift: 'text-orange-500',
+  'swift-lang': 'text-orange-500',
   kotlin: 'text-fuchsia-500',
   r: 'text-blue-400',
   scala: 'text-red-600',
@@ -156,7 +154,7 @@ function Counter() {
     swift: `import Foundation\n\nprint("Hello, Swift!")`,
     kotlin: `fun main() {\n  println("Hello, Kotlin!")\n}`,
     r: `message <- "Hello, R!"\nprint(message)`,
-    scala: `object HelloWorld {\n  def main(args: Array[String]): Unit = {\n    println("Hello, Scala!")\n  }\n}`,
+    scala: `object HelloWorld {\n  def main(args: Array<String>): Unit = {\n    println("Hello, Scala!")\n  }\n}`,
     elixir: `IO.puts "Hello, Elixir!"`,
     markdown: `# Hello, Markdown!\n\nThis is a simple paragraph.\n\n- List item 1\n- List item 2\n\n\`\`\`javascript\nconsole.log("hello");\n\`\`\``,
     vue: `<template>\n  <h1>{{ message }}</h1>\n</template>\n\n<script>\nexport default {\n  data() {\n    return {\n      message: 'Hello, Vue!'\n    }\n  }\n}\n</script>`,
@@ -253,6 +251,9 @@ export const useStore = create((set, get) => ({
     localStorage.setItem('basedsyntax:minimap', enabled);
   },
   setFollowUp: (text) => set({ followUp: text }),
+  
+  setOut: (output) => set({ out: output }),
+  setRawOut: (output) => set({ rawOut: output }),
 
   // Model and Language Actions
   setModel: (model) => {
@@ -376,7 +377,7 @@ export const useStore = create((set, get) => ({
   },
 
   streamGenerate: async (thePrompt, saveToHistory = true) => {
-    const { model, lang, rawOut } = get();
+    const { model, rawOut } = get();
     if (!model) {
       set({ out: '<p class="text-yellow-300">Select a model first.</p>', error: 'No model selected.' });
       return;
@@ -410,7 +411,7 @@ export const useStore = create((set, get) => ({
             const j = JSON.parse(line);
             if (j.response) {
               full += j.response;
-              set({ rawOut: full });
+              set({ rawOut: full, out: full });
             }
             if (j.error) {
                 throw new Error(j.error);

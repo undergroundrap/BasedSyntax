@@ -7,7 +7,7 @@ import {
   FileIcon, FolderIcon, FileTextIcon, FileCode2Icon, FileJsonIcon, FileTypeIcon, 
   FileQuestionIcon, FileStackIcon, SettingsIcon, RefreshCw, XCircle, Download, Search, 
   Type, Undo2, Redo2, Eraser, BugPlay, ListChecks, ArrowLeftRight, FlaskConical, Code, 
-  HelpCircle, Sparkles, Wand2, Terminal, FolderOpen, Files, ClipboardCopy, Loader2
+  HelpCircle, Sparkles, Wand2, Terminal, FolderOpen, Files, ClipboardCopy, Loader2, MessageSquareText
 } from 'lucide-react'
 
 // File Explorer Component
@@ -258,7 +258,7 @@ export default function App(){
     const { projectFiles, activeFilePath } = store;
     
     let context = '';
-    if (projectFiles.length > 1 && activeFilePath) {
+    if (projectFiles.length > 0 && activeFilePath) {
         const fileList = projectFiles.map(f => `- ${f.path}`).join('\n');
         context = `The user has the following project structure:\n${fileList}\n\nThe user is currently focused on the file: \`${activeFilePath}\`.\n\n`;
     }
@@ -577,6 +577,11 @@ export default function App(){
                                 <HelpCircle className="w-4 h-4 mr-1" /> Explain
                             </button>
                           </span>
+                          <span className="tooltip-wrapper" data-tooltip="Explain this code like I'm a ten-year-old">
+                            <button onClick={()=>doAction('eli10')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
+                                <Sparkles className="w-4 h-4 mr-1" /> Explain (Simple)
+                            </button>
+                          </span>
                           <span className="tooltip-wrapper" data-tooltip="Rewrite as pseudocode">
                             <button onClick={()=>doAction('pseudo')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
                                 <Sparkles className="w-4 h-4 mr-1" /> Pseudocode
@@ -617,6 +622,11 @@ export default function App(){
                                     <ListChecks className="w-4 h-4 mr-1" /> Lint
                                 </button>
                             </span>
+                            <span className="tooltip-wrapper" data-tooltip="Add comments to the code">
+                                <button onClick={()=>doAction('comments')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
+                                    <MessageSquareText className="w-4 h-4 mr-1" /> Comments
+                                </button>
+                            </span>
                             <span className="tooltip-wrapper" data-tooltip="Generate unit tests">
                                 <button onClick={()=>doAction('tests')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
                                     <Terminal className="w-4 h-4 mr-1" /> Gen Tests
@@ -654,7 +664,7 @@ export default function App(){
                             <div className="overflow-y-auto flex-1">
                                 {store.conversationHistory.length === 0 && <p className="p-4 text-sm text-muted">No history yet.</p>}
                                 {store.conversationHistory.map((item, i) => (
-                                    <div key={i} className="history-item flex justify-between items-center" onClick={() => { store.setRawOut(item.response); }}>
+                                    <div key={i} className="history-item flex justify-between items-center" onClick={() => { store.setRawOut(item.response); store.setOut(item.response); }}>
                                         <p className="text-sm text-neutral-300 truncate">{item.prompt.split('\n')[0]}</p>
                                         <button onClick={(e) => { e.stopPropagation(); store.setConversationHistory(store.conversationHistory.filter((_, idx) => idx !== i)) }} className="text-xs text-muted hover:text-red-400">
                                             <XCircle className="w-4 h-4" />
