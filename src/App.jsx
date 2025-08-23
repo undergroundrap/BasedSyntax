@@ -4,31 +4,100 @@ import Editor, { DiffEditor } from '@monaco-editor/react'
 import { marked } from 'marked'
 import Split from 'react-split'
 import { useStore, LANGS, DEMO, cx } from './store'
+import { FileIcon, FolderIcon, FileTextIcon, FileCode2Icon, FileJsonIcon, FileTypeIcon, FileQuestionIcon } from 'lucide-react'
 
 // File Explorer Component
 const FileExplorer = ({ tree, onFileSelect }) => {
-    const renderTree = (node, path = '') => {
-        return Object.entries(node).sort(([a], [b]) => a.localeCompare(b)).map(([name, content]) => {
-            const currentPath = path ? `${path}/${name}` : name;
-            if (content._file) {
-                return (
-                    <div key={currentPath} className="pl-4">
-                        <button onClick={() => onFileSelect(content._file)} className="text-left w-full px-2 py-1 text-sm text-neutral-300 hover:bg-neutral-700 rounded-md">
-                            {name}
-                        </button>
-                    </div>
-                );
-            }
-            return (
-                <details key={currentPath} className="pl-4">
-                    <summary className="cursor-pointer px-2 py-1 text-sm text-neutral-200 font-medium">{name}</summary>
-                    {renderTree(content, currentPath)}
-                </details>
-            );
-        });
+    // Determine the icon based on the file extension
+    const getFileIcon = (fileName) => {
+        const extension = fileName.split('.').pop();
+        switch (extension) {
+            case 'js':
+            case 'jsx':
+            case 'ts':
+            case 'tsx':
+            case 'mjs':
+            case 'cjs':
+            case 'json':
+            case 'html':
+            case 'css':
+            case 'py':
+            case 'go':
+            case 'rs':
+            case 'sql':
+            case 'cpp':
+            case 'csharp':
+            case 'java':
+            case 'ruby':
+            case 'php':
+            case 'sh':
+            case 'bash':
+            case 'yaml':
+            case 'yml':
+            case 'xml':
+                return <FileCode2Icon className="w-4 h-4 text-neutral-400" />;
+            case 'md':
+            case 'txt':
+            case 'gitignore':
+            case 'LICENSE':
+            case 'README':
+                return <FileTextIcon className="w-4 h-4 text-neutral-400" />;
+            default:
+                return <FileIcon className="w-4 h-4 text-neutral-400" />;
+        }
     };
 
-    return <div className="p-2 overflow-y-auto h-full bg-panel rounded-xl border border-line">{renderTree(tree)}</div>;
+    const renderTree = (node, path = '') => {
+        return Object.entries(node)
+            .sort(([aName, aContent], [bName, bContent]) => {
+                // Sort directories first, then files
+                const isADir = !aContent._file;
+                const isBDir = !bContent._file;
+                if (isADir && !isBDir) return -1;
+                if (!isADir && isBDir) return 1;
+                return aName.localeCompare(bName);
+            })
+            .map(([name, content]) => {
+                const currentPath = path ? `${path}/${name}` : name;
+                if (content._file) {
+                    const isActive = content._file.path === store.activeFilePath;
+                    return (
+                        <div key={currentPath} className="pl-4">
+                            <button
+                                onClick={() => onFileSelect(content._file)}
+                                className={cx(
+                                    "flex items-center gap-2 w-full px-2 py-1 text-sm text-left rounded-md",
+                                    isActive ? "bg-accent/30 text-accent font-semibold" : "text-neutral-300 hover:bg-neutral-700"
+                                )}
+                            >
+                                {getFileIcon(name)}
+                                <span className="truncate">{name}</span>
+                            </button>
+                        </div>
+                    );
+                }
+                return (
+                    <details key={currentPath} className="pl-4">
+                        <summary className="flex items-center gap-2 cursor-pointer px-2 py-1 text-sm text-neutral-200 font-medium hover:bg-neutral-800 rounded-md">
+                            <FolderIcon className="w-4 h-4 text-blue-400" />
+                            <span className="truncate">{name}</span>
+                        </summary>
+                        {renderTree(content, currentPath)}
+                    </details>
+                );
+            });
+    };
+
+    const store = useStore();
+    return (
+        <div className="flex flex-col h-full bg-panel rounded-xl border border-line overflow-hidden">
+            <div className="flex items-center gap-2 p-2 border-b border-line">
+                <FileQuestionIcon className="w-5 h-5 text-neutral-400" />
+                <span className="text-sm font-semibold text-neutral-200">File Explorer</span>
+            </div>
+            <div className="p-2 overflow-y-auto flex-1">{renderTree(tree)}</div>
+        </div>
+    );
 };
 
 
@@ -39,7 +108,7 @@ export default function App(){
   // --- REFS ---
   const editorRef = useRef(null)
   const fileInputRef = useRef(null)
-  const folderInputRef = useRef(null) // New ref for folder input
+  const folderInputRef = useRef(null)
   const outRef = useRef(null)
   const customPromptRef = useRef(null)
   const diffEditorRef = useRef(null)
@@ -114,7 +183,7 @@ export default function App(){
       e.preventDefault()
       if(e.type === 'drop'){
         const items = e.dataTransfer?.items;
-        if (items) {
+        if (items && items.length > 0) {
             const entry = items[0].webkitGetAsEntry();
             if (entry.isDirectory) {
                 handleFolderDrop(entry);
@@ -143,7 +212,7 @@ export default function App(){
   }, [])
 
   // --- PROMPT ENGINEERING ---
-  function getPrompt(kind, _lang, code, toLang = 'python', custom = ''){
+  function getPrompt(kind, _lang, code, prevResponse, custom = '', toLang = null){
     const { projectFiles, activeFilePath } = store;
     
     let context = '';
@@ -163,7 +232,7 @@ export default function App(){
       complexity: `Analyze the time and space complexity (Big O notation) of this code. Explain your reasoning for each.`,
       convert: `Convert the following ${_lang} code to ${toLang}. Provide the converted code in a markdown block. Afterwards, under a "Conversion Notes" heading, explain the key syntactical and logical changes made during the conversion.`,
       custom: custom,
-      followup: `The user provided the following code:\n\n\`\`\`${_lang}\n${code}\n\`\`\`\n\nYou provided this response:\n\n---\n${store.rawOut}\n---\n\nNow, answer this follow-up question: ${custom}`
+      followup: `The user provided the following code:\n\n\`\`\`${_lang}\n${code}\n\`\`\`\n\nYou provided this response:\n\n---\n${prevResponse}\n---\n\nNow, answer this follow-up question: ${custom}`
     }
     const base = bases[kind] || 'Explain this code.'
     if (kind !== 'followup') {
@@ -182,24 +251,24 @@ export default function App(){
   }
 
   // --- ACTION HANDLERS ---
-  function doAction(kind, toLang, custom){
+  function doAction(kind, toLang = null, custom = ''){
     const code = editorRef.current?.getValue() || ''
     const text = kind === 'explain-selection'
       ? editorRef.current?.getModel()?.getValueInRange(editorRef.current?.getSelection()) || ''
       : code
     if(kind === 'explain-selection'){
       if(!text.trim()) { store.setOut('<p class="text-yellow-300">Select some code to explain.</p>'); return }
-      store.streamGenerate(getPrompt('explain', store.lang, text))
+      store.streamGenerate(getPrompt('explain', store.lang, text, store.rawOut, custom, toLang))
       return
     }
-    store.streamGenerate(getPrompt(kind, store.lang, text, toLang, custom))
+    store.streamGenerate(getPrompt(kind, store.lang, text, store.rawOut, custom, toLang))
   }
 
   function handleFollowUp(e) {
     e.preventDefault();
     if (!store.followUp.trim() || !store.rawOut.trim()) return;
     const code = editorRef.current?.getValue() || '';
-    const prompt = getPrompt('followup', store.lang, code, null, store.followUp);
+    const prompt = getPrompt('followup', store.lang, code, store.rawOut, store.followUp);
     store.streamGenerate(prompt, false);
     store.setFollowUp('');
   }
@@ -242,7 +311,7 @@ export default function App(){
       const files = e.target.files;
       if (!files) return;
       const fileData = await Promise.all(Array.from(files)
-        .filter(file => !file.webkitRelativePath.includes('node_modules')) // Ignore node_modules
+        .filter(file => !file.webkitRelativePath.includes('node_modules'))
         .map(file => {
           return new Promise((resolve, reject) => {
               const reader = new FileReader();
@@ -266,7 +335,7 @@ export default function App(){
       const newContent = String(reader.result);
       store.updateEditorValue(newContent, true)
       const ext = (file.name.split('.').pop()||'').toLowerCase()
-      const map = { js:'javascript', jsx: 'javascript', mjs:'javascript', ts:'typescript', py:'python', go:'go', rs:'rust', html:'html', htm:'html', css:'css', sql:'sql', c:'cpp', h:'cpp', cpp:'cpp', hpp:'cpp', cs:'csharp', java:'java', rb:'ruby', php:'php', sh:'shell', bash:'shell', yaml:'yaml', yml:'yaml', json:'json', xml:'xml' }
+      const map = { js:'javascript', jsx: 'javascript', mjs:'javascript', ts:'typescript', py:'python', go:'go', rs:'rust', html:'html', htm:'html', css:'css', sql:'sql', c:'cpp', h:'cpp', cpp:'cpp', hpp:'cpp', cs:'csharp', java:'java', ruby:'rb', php:'php', sh:'shell', bash:'shell', yaml:'yaml', yml:'yaml', json:'json', xml:'xml' }
       store.setLang(map[ext] || 'javascript')
     }
     reader.readAsText(file)
@@ -356,7 +425,7 @@ export default function App(){
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <span className="tooltip-wrapper tooltip-bottom" data-tooltip="Settings"><button onClick={() => store.setShowSettings(true)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Settings</button></span>
-            <select value={store.model} onChange={e=>store.setModel(e.target.value)} className="flex-1 sm:flex-none bg-neutral-900 border border-neutral-700 rounded-md px-3 py-2 text-sm">
+            <select value={store.model} onChange={e=>store.setModel(e.target.value)} className="flex-1 sm:flex-none bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 text-sm">
               <option value="">Select Ollama model</option>
               {store.models.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
@@ -368,13 +437,29 @@ export default function App(){
       </header>
 
       <main className="flex-1 w-full p-4 overflow-hidden">
-        <Split className="flex h-full" sizes={[20, 45, 35]} minSize={[150, 300, 300]} gutterSize={10}>
-            {store.projectFiles.length > 0 ? <FileExplorer tree={store.fileTree} onFileSelect={store.setActiveFile} /> : <div className="bg-panel rounded-xl border border-line flex items-center justify-center text-muted">Open a folder to see files</div>}
+        <Split className="flex h-full" sizes={[12, 53, 35]} minSize={[150, 300, 300]} gutterSize={10}>
+            {/* File Explorer Panel */}
+            <div className="bg-panel rounded-xl border border-line flex flex-col overflow-hidden">
+                {store.projectFiles.length > 0 ? (
+                    <FileExplorer tree={store.fileTree} onFileSelect={store.setActiveFile} />
+                ) : (
+                    <div className="flex-1 flex items-center justify-center text-muted">
+                        Open a folder to see files
+                    </div>
+                )}
+            </div>
+
+            {/* Editor Panel */}
             <div className="flex flex-col h-full rounded-xl border border-line bg-panel overflow-visible">
                 <Split direction="vertical" sizes={[70, 30]} minSize={100} className="h-full flex flex-col">
                     <section className="flex flex-col h-full">
                       <div className="flex flex-wrap items-center gap-2 p-2 bg-neutral-900 border-b border-line relative z-10">
-                        <select value={store.lang} onChange={e=>store.setLang(e.target.value)} className="bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 text-sm">
+                        <select 
+                          value={store.lang} 
+                          onChange={e=>store.setLang(e.target.value)} 
+                          className="bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 text-sm"
+                          disabled={store.projectFiles.length > 0}
+                        >
                           {LANGS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
                         </select>
                         <span className="tooltip-wrapper" data-tooltip="Open a local file"><button onClick={()=>fileInputRef.current?.click()} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Open File</button></span>
