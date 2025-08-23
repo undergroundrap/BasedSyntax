@@ -14,69 +14,49 @@ import {
 const FileExplorer = ({ tree, onFileSelect }) => {
     const getFileIcon = (fileName) => {
         const extension = fileName.split('.').pop().toLowerCase();
-        switch (extension) {
-            case 'js':
-            case 'jsx':
-            case 'ts':
-            case 'tsx':
-            case 'mjs':
-            case 'cjs':
-                return <FileCode2Icon className="w-4 h-4 text-yellow-500" />;
-            case 'py':
-                return <FileCode2Icon className="w-4 h-4 text-blue-500" />;
-            case 'go':
-                return <FileCode2Icon className="w-4 h-4 text-sky-400" />;
-            case 'rs':
-                return <FileCode2Icon className="w-4 h-4 text-red-500" />;
-            case 'swift':
-                return <FileCode2Icon className="w-4 h-4 text-orange-500" />;
-            case 'kt':
-                return <FileCode2Icon className="w-4 h-4 text-purple-500" />;
-            case 'r':
-                return <FileCode2Icon className="w-4 h-4 text-blue-400" />;
-            case 'scala':
-                return <FileCode2Icon className="w-4 h-4 text-red-600" />;
-            case 'ex':
-            case 'exs':
-                return <FileCode2Icon className="w-4 h-4 text-purple-400" />;
-            case 'cpp':
-            case 'c':
-            case 'h':
-            case 'hpp':
-                return <FileCode2Icon className="w-4 h-4 text-blue-600" />;
-            case 'cs':
-                return <FileCode2Icon className="w-4 h-4 text-green-500" />;
-            case 'java':
-                return <FileCode2Icon className="w-4 h-4 text-red-500" />;
-            case 'ruby':
-            case 'rb':
-                return <FileCode2Icon className="w-4 h-4 text-red-500" />;
-            case 'php':
-                return <FileCode2Icon className="w-4 h-4 text-indigo-500" />;
-            case 'sh':
-            case 'bash':
-                return <FileCode2Icon className="w-4 h-4 text-gray-400" />;
-            case 'json':
-                return <FileJsonIcon className="w-4 h-4 text-amber-500" />;
-            case 'html':
-            case 'vue':
-            case 'svelte':
-                return <FileTextIcon className="w-4 h-4 text-orange-500" />;
-            case 'css':
-                return <FileTypeIcon className="w-4 h-4 text-blue-400" />;
-            case 'md':
-            case 'txt':
-            case 'gitignore':
-            case 'LICENSE':
-            case 'README':
-                return <FileTextIcon className="w-4 h-4 text-neutral-400" />;
-            case 'yaml':
-            case 'yml':
-            case 'xml':
-                return <FileStackIcon className="w-4 h-4 text-green-400" />;
-            default:
-                return <FileIcon className="w-4 h-4 text-neutral-400" />;
+        const iconMap = {
+            'js': <FileCode2Icon className="w-4 h-4 text-yellow-500" />,
+            'jsx': <FileCode2Icon className="w-4 h-4 text-yellow-500" />,
+            'ts': <FileCode2Icon className="w-4 h-4 text-blue-500" />,
+            'tsx': <FileCode2Icon className="w-4 h-4 text-blue-500" />,
+            'mjs': <FileCode2Icon className="w-4 h-4 text-yellow-500" />,
+            'cjs': <FileCode2Icon className="w-4 h-4 text-yellow-500" />,
+            'py': <FileCode2Icon className="w-4 h-4 text-blue-500" />,
+            'go': <FileCode2Icon className="w-4 h-4 text-sky-400" />,
+            'rs': <FileCode2Icon className="w-4 h-4 text-red-500" />,
+            'swift': <FileCode2Icon className="w-4 h-4 text-orange-500" />,
+            'kt': <FileCode2Icon className="w-4 h-4 text-purple-500" />,
+            'r': <FileCode2Icon className="w-4 h-4 text-blue-400" />,
+            'scala': <FileCode2Icon className="w-4 h-4 text-red-600" />,
+            'ex': <FileCode2Icon className="w-4 h-4 text-purple-400" />,
+            'exs': <FileCode2Icon className="w-4 h-4 text-purple-400" />,
+            'cpp': <FileCode2Icon className="w-4 h-4 text-blue-600" />,
+            'c': <FileCode2Icon className="w-4 h-4 text-blue-600" />,
+            'h': <FileCode2Icon className="w-4 h-4 text-blue-600" />,
+            'hpp': <FileCode2Icon className="w-4 h-4 text-blue-600" />,
+            'cs': <FileCode2Icon className="w-4 h-4 text-green-500" />,
+            'java': <FileCode2Icon className="w-4 h-4 text-red-500" />,
+            'ruby': <FileCode2Icon className="w-4 h-4 text-red-500" />,
+            'rb': <FileCode2Icon className="w-4 h-4 text-red-500" />,
+            'php': <FileCode2Icon className="w-4 h-4 text-indigo-500" />,
+            'sh': <FileCode2Icon className="w-4 h-4 text-gray-400" />,
+            'bash': <FileCode2Icon className="w-4 h-4 text-gray-400" />,
+            'json': <FileJsonIcon className="w-4 h-4 text-amber-500" />,
+            'html': <FileTextIcon className="w-4 h-4 text-orange-500" />,
+            'vue': <FileTextIcon className="w-4 h-4 text-orange-500" />,
+            'svelte': <FileTextIcon className="w-4 h-4 text-orange-500" />,
+            'css': <FileTypeIcon className="w-4 h-4 text-blue-400" />,
+            'md': <FileTextIcon className="w-4 h-4 text-neutral-400" />,
+            'txt': <FileTextIcon className="w-4 h-4 text-neutral-400" />,
+            'gitignore': <FileTextIcon className="w-4 h-4 text-neutral-400" />,
+            'LICENSE': <FileTextIcon className="w-4 h-4 text-neutral-400" />,
+            'README': <FileTextIcon className="w-4 h-4 text-neutral-400" />,
+            'yaml': <FileStackIcon className="w-4 h-4 text-green-400" />,
+            'yml': <FileStackIcon className="w-4 h-4 text-green-400" />,
+            'xml': <FileStackIcon className="w-4 h-4 text-green-400" />,
+            default: <FileIcon className="w-4 h-4 text-neutral-400" />,
         }
+        return iconMap[extension] || iconMap.default;
     };
 
     const renderTree = (node, path = '') => {
@@ -122,7 +102,7 @@ const FileExplorer = ({ tree, onFileSelect }) => {
 
     const store = useStore();
     return (
-        <div className="flex flex-col h-full bg-panel rounded-xl border border-line overflow-hidden">
+        <div className="flex flex-col h-full bg-panel rounded-xl border border-line">
             <div className="flex items-center gap-2 p-2 border-b border-line">
                 <Files className="w-5 h-5 text-neutral-400" />
                 <span className="text-sm font-semibold text-neutral-200">File Explorer</span>
@@ -478,7 +458,7 @@ export default function App(){
               <option value="">Select Ollama model</option>
               {store.models.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
-            <span className="tooltip-wrapper tooltip-bottom" data-tooltip="Refresh model list">
+            <span className="tooltip-wrapper tooltip-bottom" data-tooltip="Refresh list">
               <button onClick={()=>{store.checkHealth(); store.loadModels();}} className="bg-neutral-800 border border-neutral-700 rounded-md p-2 text-sm hover:bg-neutral-700">
                 <RefreshCw className="w-5 h-5" />
               </button>
@@ -489,10 +469,10 @@ export default function App(){
         {store.error && <div className="px-4 pb-2 text-xs text-red-400 bg-red-900/30">{store.error}</div>}
       </header>
 
-      <main className="flex-1 w-full p-4 overflow-hidden">
+      <main className="flex-1 w-full p-4 overflow-x-hidden">
         <Split className="flex h-full" sizes={[12, 53, 35]} minSize={[150, 300, 300]} gutterSize={10}>
             {/* File Explorer Panel */}
-            <div className="bg-panel rounded-xl border border-line flex flex-col overflow-hidden">
+            <div className="bg-panel rounded-xl border border-line flex flex-col">
                 {store.projectFiles.length > 0 ? (
                     <FileExplorer tree={store.fileTree} onFileSelect={store.setActiveFile} />
                 ) : (
@@ -687,7 +667,7 @@ export default function App(){
                 </Split>
             </div>
             {/* Right Panel: Output */}
-            <section className="flex flex-col rounded-xl border border-line overflow-hidden h-full bg-panel">
+            <section className="flex flex-col rounded-xl border border-line h-full bg-panel">
               <div className="flex items-center justify-between gap-2 p-2 bg-neutral-900 border-b border-line">
                 <div className="flex items-center gap-3">
                   <div className="text-sm font-semibold">Output</div>
