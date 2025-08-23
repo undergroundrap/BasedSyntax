@@ -1,16 +1,19 @@
-// src/App.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Editor, { DiffEditor } from '@monaco-editor/react'
 import { marked } from 'marked'
 import Split from 'react-split'
-import { useStore, LANGS, DEMO, cx } from './store'
-import { FileIcon, FolderIcon, FileTextIcon, FileCode2Icon, FileJsonIcon, FileTypeIcon, FileQuestionIcon, FileStackIcon } from 'lucide-react'
+import { useStore, LANGS, DEMO, cx, LANGUAGE_COLORS } from './store'
+import { 
+  FileIcon, FolderIcon, FileTextIcon, FileCode2Icon, FileJsonIcon, FileTypeIcon, 
+  FileQuestionIcon, FileStackIcon, SettingsIcon, RefreshCw, XCircle, Download, Search, 
+  Type, Undo2, Redo2, Eraser, BugPlay, ListChecks, ArrowLeftRight, FlaskConical, Code, 
+  HelpCircle, Sparkles, Wand2, Terminal, FolderOpen, Files, ClipboardCopy, Loader2
+} from 'lucide-react'
 
 // File Explorer Component
 const FileExplorer = ({ tree, onFileSelect }) => {
-    // Determine the icon based on the file extension
     const getFileIcon = (fileName) => {
-        const extension = fileName.split('.').pop();
+        const extension = fileName.split('.').pop().toLowerCase();
         switch (extension) {
             case 'js':
             case 'jsx':
@@ -18,34 +21,49 @@ const FileExplorer = ({ tree, onFileSelect }) => {
             case 'tsx':
             case 'mjs':
             case 'cjs':
+                return <FileCode2Icon className="w-4 h-4 text-yellow-500" />;
             case 'py':
+                return <FileCode2Icon className="w-4 h-4 text-blue-500" />;
             case 'go':
+                return <FileCode2Icon className="w-4 h-4 text-sky-400" />;
             case 'rs':
+                return <FileCode2Icon className="w-4 h-4 text-red-500" />;
             case 'swift':
+                return <FileCode2Icon className="w-4 h-4 text-orange-500" />;
             case 'kt':
+                return <FileCode2Icon className="w-4 h-4 text-purple-500" />;
             case 'r':
+                return <FileCode2Icon className="w-4 h-4 text-blue-400" />;
             case 'scala':
+                return <FileCode2Icon className="w-4 h-4 text-red-600" />;
             case 'ex':
+            case 'exs':
+                return <FileCode2Icon className="w-4 h-4 text-purple-400" />;
             case 'cpp':
             case 'c':
             case 'h':
             case 'hpp':
+                return <FileCode2Icon className="w-4 h-4 text-blue-600" />;
             case 'cs':
+                return <FileCode2Icon className="w-4 h-4 text-green-500" />;
             case 'java':
+                return <FileCode2Icon className="w-4 h-4 text-red-500" />;
             case 'ruby':
             case 'rb':
+                return <FileCode2Icon className="w-4 h-4 text-red-500" />;
             case 'php':
+                return <FileCode2Icon className="w-4 h-4 text-indigo-500" />;
             case 'sh':
             case 'bash':
-                return <FileCode2Icon className="w-4 h-4 text-neutral-400" />;
+                return <FileCode2Icon className="w-4 h-4 text-gray-400" />;
             case 'json':
-                return <FileJsonIcon className="w-4 h-4 text-neutral-400" />;
+                return <FileJsonIcon className="w-4 h-4 text-amber-500" />;
             case 'html':
             case 'vue':
             case 'svelte':
-                return <FileTextIcon className="w-4 h-4 text-neutral-400" />;
+                return <FileTextIcon className="w-4 h-4 text-orange-500" />;
             case 'css':
-                return <FileTypeIcon className="w-4 h-4 text-neutral-400" />;
+                return <FileTypeIcon className="w-4 h-4 text-blue-400" />;
             case 'md':
             case 'txt':
             case 'gitignore':
@@ -55,7 +73,7 @@ const FileExplorer = ({ tree, onFileSelect }) => {
             case 'yaml':
             case 'yml':
             case 'xml':
-                return <FileStackIcon className="w-4 h-4 text-neutral-400" />;
+                return <FileStackIcon className="w-4 h-4 text-green-400" />;
             default:
                 return <FileIcon className="w-4 h-4 text-neutral-400" />;
         }
@@ -65,7 +83,6 @@ const FileExplorer = ({ tree, onFileSelect }) => {
         const store = useStore();
         return Object.entries(node)
             .sort(([aName, aContent], [bName, bContent]) => {
-                // Sort directories first, then files
                 const isADir = !aContent._file;
                 const isBDir = !bContent._file;
                 if (isADir && !isBDir) return -1;
@@ -107,7 +124,7 @@ const FileExplorer = ({ tree, onFileSelect }) => {
     return (
         <div className="flex flex-col h-full bg-panel rounded-xl border border-line overflow-hidden">
             <div className="flex items-center gap-2 p-2 border-b border-line">
-                <FileQuestionIcon className="w-5 h-5 text-neutral-400" />
+                <Files className="w-5 h-5 text-neutral-400" />
                 <span className="text-sm font-semibold text-neutral-200">File Explorer</span>
             </div>
             <div className="p-2 overflow-y-auto flex-1">{renderTree(tree)}</div>
@@ -132,15 +149,17 @@ export default function App(){
   const renderer = useMemo(() => {
     const r = new marked.Renderer();
     r.code = (code, language) => {
-      const validLang = window.hljs?.getLanguage(language) ? language : 'plaintext';
+      // Use the language map from the store for more accurate highlighting
+      const validLang = LANGS.find(l => l.aliases?.includes(language) || l.id === language)?.id || 'plaintext';
       const highlightedCode = window.hljs?.highlight(code, { language: validLang, ignoreIllegals: true }).value;
+      const langColor = LANGUAGE_COLORS[validLang] || 'text-neutral-400';
       
       return `
         <div class="code-container">
           <div class="code-actions">
-            <span class="text-xs text-neutral-400 pr-2">${validLang}</span>
-            <button class="code-btn" data-lang="${validLang}" data-tooltip="Apply this code to the editor" data-action="apply">Apply</button>
-            <button class="code-btn" data-tooltip="Copy code to clipboard" data-action="copy">Copy</button>
+            <span class="text-xs ${langColor} pr-2">${language || 'plaintext'}</span>
+            <button class="code-btn" data-lang="${validLang}" data-tooltip="Apply this code to the editor" data-action="apply"><i class="lucide lucide-wand-2 w-4 h-4"></i> Apply</button>
+            <button class="code-btn" data-tooltip="Copy code to clipboard" data-action="copy"><i class="lucide lucide-clipboard-copy w-4 h-4"></i> Copy</button>
           </div>
           <pre><code class="hljs language-${validLang}">${highlightedCode}</code></pre>
         </div>
@@ -163,23 +182,27 @@ export default function App(){
 
     const handleClick = (e) => {
       const target = e.target;
-      if (target.classList.contains('code-btn')) {
-        const action = target.dataset.action;
-        const code = target.closest('.code-container').querySelector('code').innerText;
+      const button = target.closest('.code-btn');
+      if (button) {
+        const action = button.dataset.action;
+        const code = button.closest('.code-container').querySelector('code').innerText;
 
         if (action === 'copy') {
+          // Use a custom message since document.execCommand('copy') doesn't have a callback
+          const originalText = button.innerHTML;
+          button.innerHTML = '<i class="lucide lucide-check w-4 h-4"></i> Copied!';
           document.execCommand('copy');
-          target.innerText = 'Copied!';
-          setTimeout(() => { target.innerText = 'Copy' }, 2000);
+          setTimeout(() => { button.innerHTML = originalText }, 2000);
         } else if (action === 'apply') {
-          const language = target.dataset.lang;
+          const language = button.dataset.lang;
           if (language && LANGS.some(l => l.id === language)) {
             store.setLang(language);
           }
           store.updateEditorValue(code, true);
-          target.innerText = 'Applied!';
+          const originalText = button.innerHTML;
+          button.innerHTML = '<i class="lucide lucide-wand-2 w-4 h-4"></i> Applied!';
           store.setActiveTab('diff');
-          setTimeout(() => { target.innerText = 'Apply' }, 2000);
+          setTimeout(() => { button.innerHTML = originalText }, 2000);
         }
       }
     };
@@ -187,10 +210,8 @@ export default function App(){
     outputElement.addEventListener('click', handleClick);
     return () => outputElement.removeEventListener('click', handleClick);
   }, [store.out]);
-
-  useEffect(() => { store.checkHealth(); store.loadModels(); }, [])
-  useEffect(() => { if(store.streaming && outRef.current){ outRef.current.scrollTop = outRef.current.scrollHeight } }, [store.out, store.streaming])
   
+  // Drag and drop functionality
   useEffect(() => {
     const overlay = document.getElementById('dropOverlay')
     const onEnterOver = (e) => { e.preventDefault(); overlay.style.display = 'flex' }
@@ -226,6 +247,12 @@ export default function App(){
     }
   }, [])
 
+  // Ollama health and model loading on startup
+  useEffect(() => { store.checkHealth(); store.loadModels(); }, [])
+  
+  // Auto-scroll output on new content
+  useEffect(() => { if(store.streaming && outRef.current){ outRef.current.scrollTop = outRef.current.scrollHeight } }, [store.out, store.streaming])
+  
   // --- PROMPT ENGINEERING ---
   function getPrompt(kind, _lang, code, prevResponse, custom = '', toLang = null){
     const { projectFiles, activeFilePath } = store;
@@ -237,22 +264,22 @@ export default function App(){
     }
 
     const bases = {
-      explain: `Explain the following ${_lang} code. Break it down step-by-step. Use headings for different parts of the code (e.g., "Function Definition", "Main Logic", "Output"). Explain the purpose of each part and how they work together.`,
+      explain: `Explain the following ${_lang} code in detail. Break it down step-by-step. Use Markdown headings for different parts of the code (e.g., "Function Definition", "Main Logic"). Explain the purpose of each part and how they work together.`,
       pseudo:  `Rewrite the following ${_lang} code as clear, indented pseudocode. Use comments to clarify complex or non-obvious steps.`,
-      eli10:   `Explain this ${_lang} code like I'm 10 years old. Use simple words and analogies.`,
-      tests:   `Generate idiomatic unit tests for the following ${_lang} code. Include a brief explanation for each test case, describing what it's testing.`,
-      bugs:    `Analyze the following ${_lang} code for potential bugs, edge cases, and performance issues. For each issue found, provide a heading (e.g., "Logic Error", "Performance Issue"), a brief explanation of the problem, and a suggested fix with a code example.`,
-      refactor: `Refactor the following ${_lang} code to improve its readability, performance, and maintainability. Provide the full refactored code. After the code, explain the key changes and why they were made under a "Changes" heading.`,
+      eli10:   `Explain this ${_lang} code like I'm a ten-year-old. Use simple words and analogies.`,
+      tests:   `Generate idiomatic unit tests for the following ${_lang} code. Include a brief explanation for each test case, describing what it is testing.`,
+      bugs:    `Analyze the following ${_lang} code for potential bugs, security vulnerabilities, edge cases, and performance issues. For each issue, provide a heading (e.g., "Logic Error", "Performance Issue"), a brief explanation of the problem, and a suggested fix with a code example.`,
+      refactor: `Refactor the following ${_lang} code to improve its readability, performance, and maintainability. Provide the full refactored code in a Markdown code block. After the code, explain the key changes and why they were made under a "Changes" heading.`,
       comments: `Add comments to the following ${_lang} code. First, provide the full, commented code block. After the code block, add a "Comment Explanations" heading and use a list to explain why each significant comment was added.`,
       complexity: `Analyze the time and space complexity (Big O notation) of this code. Explain your reasoning for each.`,
-      convert: `Convert the following ${_lang} code to ${toLang}. Provide the converted code in a markdown block. Afterwards, under a "Conversion Notes" heading, explain the key syntactical and logical changes made during the conversion.`,
+      convert: `Convert the following ${_lang} code to ${toLang}. Provide the converted code in a Markdown code block. Afterwards, under a "Conversion Notes" heading, explain the key syntactical and logical changes made during the conversion.`,
       lint: `Act as a senior developer and perform a comprehensive static analysis (lint) of the following ${_lang} code. Identify any style violations, potential errors, or bad practices. Provide your findings in a clear, formatted list. For each item, describe the problem and suggest a corrected code snippet.`,
       custom: custom,
       followup: `The user provided the following code:\n\n\`\`\`${_lang}\n${code}\n\`\`\`\n\nYou provided this response:\n\n---\n${prevResponse}\n---\n\nNow, answer this follow-up question: ${custom}`
     }
-    const base = bases[kind] || 'Explain this code.'
+    const base = bases[kind] || 'Explain this code.';
     if (kind !== 'followup') {
-        return `${context}${base}\n\n\`\`\`${_lang}\n${code}\n\`\`\``
+        return `${context}${base}\n\n\`\`\`${_lang}\n${code}\n\`\`\``;
     }
     return base;
   }
@@ -268,16 +295,16 @@ export default function App(){
 
   // --- ACTION HANDLERS ---
   function doAction(kind, toLang = null, custom = ''){
-    const code = editorRef.current?.getValue() || ''
+    const code = editorRef.current?.getValue() || '';
     const text = kind === 'explain-selection'
       ? editorRef.current?.getModel()?.getValueInRange(editorRef.current?.getSelection()) || ''
-      : code
-    if(kind === 'explain-selection'){
-      if(!text.trim()) { store.setOut('<p class="text-yellow-300">Select some code to explain.</p>'); return }
-      store.streamGenerate(getPrompt('explain', store.lang, text, store.rawOut, custom, toLang))
-      return
+      : code;
+    if (kind === 'explain-selection'){
+      if (!text.trim()) { store.setOut('<p class="text-yellow-300">Select some code to explain.</p>'); return; }
+      store.streamGenerate(getPrompt('explain', store.lang, text, store.rawOut, custom, toLang));
+      return;
     }
-    store.streamGenerate(getPrompt(kind, store.lang, text, store.rawOut, custom, toLang))
+    store.streamGenerate(getPrompt(kind, store.lang, text, store.rawOut, custom, toLang));
   }
 
   function handleFollowUp(e) {
@@ -305,8 +332,8 @@ export default function App(){
           const content = await file.text();
           files.push({ path: `${path}${file.name}`, content });
       } else if (entry.isDirectory) {
-          if (entry.name === 'node_modules') {
-              return []; // Ignore node_modules directories
+          if (entry.name === 'node_modules' || entry.name.startsWith('.')) {
+              return []; // Ignore node_modules and dot directories
           }
           const dirReader = entry.createReader();
           const entries = await new Promise(resolve => dirReader.readEntries(resolve));
@@ -327,7 +354,7 @@ export default function App(){
       const files = e.target.files;
       if (!files) return;
       const fileData = await Promise.all(Array.from(files)
-        .filter(file => !file.webkitRelativePath.includes('node_modules'))
+        .filter(file => !file.webkitRelativePath.includes('node_modules') && !file.webkitRelativePath.startsWith('.'))
         .map(file => {
           return new Promise((resolve, reject) => {
               const reader = new FileReader();
@@ -342,7 +369,6 @@ export default function App(){
       store.setProjectFiles(fileData);
   }
 
-
   function onOpenFile(e){
     const file = e.target.files?.[0]
     if(!file) return
@@ -351,8 +377,12 @@ export default function App(){
       const newContent = String(reader.result);
       store.updateEditorValue(newContent, true)
       const ext = (file.name.split('.').pop()||'').toLowerCase()
-      // Updated mapping to support new languages
-      const map = { js:'javascript', jsx: 'javascript', mjs:'javascript', ts:'typescript', py:'python', go:'go', rs:'rust', html:'html', htm:'html', css:'css', sql:'sql', c:'cpp', h:'cpp', cpp:'cpp', hpp:'cpp', cs:'csharp', java:'java', rb:'ruby', php:'php', sh:'shell', bash:'shell', yaml:'yaml', yml:'yaml', json:'json', xml:'xml', swift:'swift', kt:'kotlin', r:'r', scala:'scala', ex:'elixir', md:'markdown', vue:'vue', svelte:'svelte' }
+      // Updated mapping to support new languages from store
+      const map = LANGS.reduce((acc, l) => {
+        acc[l.id] = l.id;
+        l.aliases?.forEach(a => acc[a] = l.id);
+        return acc;
+      }, {});
       store.setLang(map[ext] || 'javascript')
     }
     reader.readAsText(file)
@@ -360,10 +390,7 @@ export default function App(){
 
   function saveFile(){
     const code = editorRef.current?.getValue() || ''
-    // Updated extension mapping for new languages
-    const ext = {
-      javascript:'js', typescript:'ts', python:'py', go:'go', rust:'rs', html:'html', css:'css', sql:'sql', cpp:'cpp', csharp:'cs', java:'java', ruby:'rb', php:'php', shell:'sh', yaml:'yml', json:'json', xml:'xml', swift:'swift', kotlin:'kt', r:'r', scala:'scala', elixir:'ex', markdown:'md', vue:'vue', svelte:'svelte'
-    }[store.lang] || 'txt'
+    const ext = LANGS.find(l => l.id === store.lang)?.aliases?.[0] || 'txt';
     const blob = new Blob([code], { type: 'text/plain' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -444,12 +471,20 @@ export default function App(){
             <div className={cx('text-xs px-2 py-1 rounded-full border', store.statusClass)}>{store.status}</div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="tooltip-wrapper tooltip-bottom" data-tooltip="Settings"><button onClick={() => store.setShowSettings(true)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Settings</button></span>
+            <span className="tooltip-wrapper tooltip-bottom" data-tooltip="Settings">
+              <button onClick={() => store.setShowSettings(true)} className="bg-neutral-800 border border-neutral-700 rounded-md p-2 text-sm hover:bg-neutral-700">
+                <SettingsIcon className="w-5 h-5" />
+              </button>
+            </span>
             <select value={store.model} onChange={e=>store.setModel(e.target.value)} className="flex-1 sm:flex-none bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 text-sm">
               <option value="">Select Ollama model</option>
               {store.models.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
-            <span className="tooltip-wrapper tooltip-bottom" data-tooltip="Refresh model list"><button onClick={()=>{store.checkHealth(); store.loadModels();}} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Refresh</button></span>
+            <span className="tooltip-wrapper tooltip-bottom" data-tooltip="Refresh model list">
+              <button onClick={()=>{store.checkHealth(); store.loadModels();}} className="bg-neutral-800 border border-neutral-700 rounded-md p-2 text-sm hover:bg-neutral-700">
+                <RefreshCw className="w-5 h-5" />
+              </button>
+            </span>
           </div>
         </div>
         {store.tip && (<div className="px-4 pb-2 text-xs text-muted">{store.tip}</div>)}
@@ -463,8 +498,11 @@ export default function App(){
                 {store.projectFiles.length > 0 ? (
                     <FileExplorer tree={store.fileTree} onFileSelect={store.setActiveFile} />
                 ) : (
-                    <div className="flex-1 flex items-center justify-center text-muted">
-                        Open a folder to see files
+                    <div className="flex-1 flex flex-col items-center justify-center text-muted p-4">
+                        <FolderOpen className="w-12 h-12 text-neutral-600 mb-2" />
+                        <p className="text-center text-sm">Open a folder or drop files here to get started.</p>
+                        <button onClick={()=>folderInputRef.current?.click()} className="mt-4 bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Open Folder</button>
+                        <button onClick={()=>fileInputRef.current?.click()} className="mt-2 bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Open File</button>
                     </div>
                 )}
             </div>
@@ -482,16 +520,33 @@ export default function App(){
                         >
                           {LANGS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
                         </select>
-                        <span className="tooltip-wrapper" data-tooltip="Open a local file"><button onClick={()=>fileInputRef.current?.click()} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Open File</button></span>
-                        <span className="tooltip-wrapper" data-tooltip="Open a local folder"><button onClick={()=>folderInputRef.current?.click()} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Open Folder</button></span>
-                        <span className="tooltip-wrapper" data-tooltip="Save the current code"><button onClick={saveFile} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Save</button></span>
-                        <span className="tooltip-wrapper" data-tooltip="Search in code (Ctrl+F)"><button onClick={findInCode} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Search</button></span>
-                        <span className="tooltip-wrapper" data-tooltip="Format code (Prettier)"><button onClick={formatCode} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Format</button></span>
+                        <span className="tooltip-wrapper" data-tooltip="Search in code (Ctrl+F)">
+                            <button onClick={findInCode} className="bg-neutral-800 border border-neutral-700 rounded-md p-2 text-sm hover:bg-neutral-700">
+                                <Search className="w-5 h-5" />
+                            </button>
+                        </span>
+                        <span className="tooltip-wrapper" data-tooltip="Format code (Prettier)">
+                            <button onClick={formatCode} className="bg-neutral-800 border border-neutral-700 rounded-md p-2 text-sm hover:bg-neutral-700">
+                                <Code className="w-5 h-5" />
+                            </button>
+                        </span>
                         <div className="flex-1" />
-                        <div className="text-xs text-muted px-2">{store.editorStats.chars} chars · {store.editorStats.lines} lines</div>
-                        <span className="tooltip-wrapper" data-tooltip="Undo last change"><button onClick={store.undo} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50" disabled={store.editorHistory.length === 0}>Undo</button></span>
-                        <span className="tooltip-wrapper" data-tooltip="Redo last change"><button onClick={store.redo} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50" disabled={store.editorRedoStack.length === 0}>Redo</button></span>
-                        <span className="tooltip-wrapper" data-tooltip="Clear the editor"><button onClick={()=>store.updateEditorValue('', true)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Clear</button></span>
+                        <div className="text-xs text-muted px-2 hidden sm:block">{store.editorStats.chars} chars · {store.editorStats.lines} lines</div>
+                        <span className="tooltip-wrapper" data-tooltip="Undo last change">
+                            <button onClick={store.undo} className="bg-neutral-800 border border-neutral-700 rounded-md p-2 text-sm hover:bg-neutral-700 disabled:opacity-50" disabled={store.editorHistory.length === 0}>
+                                <Undo2 className="w-5 h-5" />
+                            </button>
+                        </span>
+                        <span className="tooltip-wrapper" data-tooltip="Redo last change">
+                            <button onClick={store.redo} className="bg-neutral-800 border border-neutral-700 rounded-md p-2 text-sm hover:bg-neutral-700 disabled:opacity-50" disabled={store.editorRedoStack.length === 0}>
+                                <Redo2 className="w-5 h-5" />
+                            </button>
+                        </span>
+                        <span className="tooltip-wrapper" data-tooltip="Clear the editor">
+                            <button onClick={()=>store.updateEditorValue('', true)} className="bg-neutral-800 border border-neutral-700 rounded-md p-2 text-sm hover:bg-neutral-700">
+                                <Eraser className="w-5 h-5" />
+                            </button>
+                        </span>
                       </div>
                       <div className="flex-1 relative">
                         <Editor
@@ -517,20 +572,33 @@ export default function App(){
                       </div>
                       <div className="flex flex-col items-center gap-2 p-2 border-t border-line bg-neutral-900">
                         <div className="flex flex-wrap justify-center gap-2">
-                          <span className="tooltip-wrapper" data-tooltip="Explain the code step-by-step"><button onClick={()=>doAction('explain')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Explain</button></span>
-                          <span className="tooltip-wrapper" data-tooltip="Rewrite as pseudocode"><button onClick={()=>doAction('pseudo')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Pseudocode</button></span>
-                          <span className="tooltip-wrapper" data-tooltip="Explain it like I'm 10"><button onClick={()=>doAction('eli10')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>ELI10</button></span>
-                          <span className="tooltip-wrapper" data-tooltip="Generate unit tests"><button onClick={()=>doAction('tests')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Gen Tests</button></span>
-                          <span className="tooltip-wrapper" data-tooltip="Find potential bugs and issues"><button onClick={()=>doAction('bugs')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Find Bugs</button></span>
+                          <span className="tooltip-wrapper" data-tooltip="Explain the code step-by-step">
+                            <button onClick={()=>doAction('explain')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
+                                <HelpCircle className="w-4 h-4 mr-1" /> Explain
+                            </button>
+                          </span>
+                          <span className="tooltip-wrapper" data-tooltip="Rewrite as pseudocode">
+                            <button onClick={()=>doAction('pseudo')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
+                                <Sparkles className="w-4 h-4 mr-1" /> Pseudocode
+                            </button>
+                          </span>
+                          <span className="tooltip-wrapper" data-tooltip="Find potential bugs and issues">
+                            <button onClick={()=>doAction('bugs')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
+                                <BugPlay className="w-4 h-4 mr-1" /> Find Bugs
+                            </button>
+                          </span>
+                          <span className="tooltip-wrapper" data-tooltip="Suggest improvements to the code">
+                            <button onClick={()=>doAction('refactor')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
+                                <Wand2 className="w-4 h-4 mr-1" /> Refactor
+                            </button>
+                          </span>
                         </div>
                         <div className="flex flex-wrap justify-center items-center gap-2">
-                            <span className="tooltip-wrapper" data-tooltip="Suggest improvements to the code"><button onClick={()=>doAction('refactor')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Refactor</button></span>
-                            <span className="tooltip-wrapper" data-tooltip="Add and explain comments"><button onClick={()=>doAction('comments')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Add Comments</button></span>
-                            <span className="tooltip-wrapper" data-tooltip="Analyze time and space complexity"><button onClick={()=>doAction('complexity')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Complexity</button></span>
-                            <span className="tooltip-wrapper" data-tooltip="Lint the code for style and errors"><button onClick={()=>doAction('lint')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Lint</button></span>
                             <div className="tooltip-wrapper" data-tooltip="Translate code to another language">
                                 <div className="flex items-center gap-2">
-                                    <button onClick={()=>store.setShowLangConvert(!store.showLangConvert)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>Convert Language</button>
+                                    <button onClick={()=>store.setShowLangConvert(!store.showLangConvert)} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
+                                        <ArrowLeftRight className="w-4 h-4 mr-1" /> Convert
+                                    </button>
                                     {store.showLangConvert && (
                                         <select onChange={e=>doAction('convert', e.target.value)} className="bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 text-sm">
                                             <option>Select Language</option>
@@ -539,10 +607,33 @@ export default function App(){
                                     )}
                                 </div>
                             </div>
+                            <span className="tooltip-wrapper" data-tooltip="Analyze time and space complexity">
+                                <button onClick={()=>doAction('complexity')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
+                                    <FlaskConical className="w-4 h-4 mr-1" /> Complexity
+                                </button>
+                            </span>
+                            <span className="tooltip-wrapper" data-tooltip="Lint the code for style and errors">
+                                <button onClick={()=>doAction('lint')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
+                                    <ListChecks className="w-4 h-4 mr-1" /> Lint
+                                </button>
+                            </span>
+                            <span className="tooltip-wrapper" data-tooltip="Generate unit tests">
+                                <button onClick={()=>doAction('tests')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 hover:bg-neutral-700 disabled:opacity-50" disabled={store.streaming}>
+                                    <Terminal className="w-4 h-4 mr-1" /> Gen Tests
+                                </button>
+                            </span>
                         </div>
                         <div className="flex flex-wrap justify-center gap-2">
-                            <span className="tooltip-wrapper" data-tooltip="Explain only the selected code"><button onClick={()=>doAction('explain-selection')} className="bg-green-600/80 border border-green-500 rounded-md px-3 py-2 hover:bg-green-500 disabled:opacity-50" disabled={store.streaming}>Explain Selection</button></span>
-                            <span className="tooltip-wrapper" data-tooltip="Write your own prompt"><button onClick={()=>store.setShowCustomPrompt(true)} className="bg-accent border border-blue-500 rounded-md px-3 py-2 hover:bg-blue-500 disabled:opacity-50" disabled={store.streaming}>Custom Prompt</button></span>
+                            <span className="tooltip-wrapper" data-tooltip="Explain only the selected code">
+                                <button onClick={()=>doAction('explain-selection')} className="bg-green-600/80 border border-green-500 rounded-md px-3 py-2 hover:bg-green-500 disabled:opacity-50" disabled={store.streaming}>
+                                    <Type className="w-4 h-4 mr-1" /> Explain Selection
+                                </button>
+                            </span>
+                            <span className="tooltip-wrapper" data-tooltip="Write your own prompt">
+                                <button onClick={()=>store.setShowCustomPrompt(true)} className="bg-accent border border-blue-500 rounded-md px-3 py-2 hover:bg-blue-500 disabled:opacity-50" disabled={store.streaming}>
+                                    <Sparkles className="w-4 h-4 mr-1" /> Custom Prompt
+                                </button>
+                            </span>
                         </div>
                       </div>
                     </section>
@@ -554,7 +645,9 @@ export default function App(){
                                 <button onClick={() => store.setActiveTab('diff')} className={`px-3 py-1 text-sm rounded-md ${store.activeTab === 'diff' ? 'bg-neutral-700' : ''}`}>Diff</button>
                             </div>
                             {store.activeTab === 'history' && (
-                                <button onClick={() => store.setConversationHistory([])} className="text-xs text-muted hover:text-white">Clear All</button>
+                                <button onClick={() => store.setConversationHistory([])} className="text-xs text-muted hover:text-white flex items-center gap-1">
+                                    <XCircle className="w-4 h-4" /> Clear All
+                                </button>
                             )}
                         </div>
                         {store.activeTab === 'history' && (
@@ -563,7 +656,9 @@ export default function App(){
                                 {store.conversationHistory.map((item, i) => (
                                     <div key={i} className="history-item flex justify-between items-center" onClick={() => { store.setRawOut(item.response); }}>
                                         <p className="text-sm text-neutral-300 truncate">{item.prompt.split('\n')[0]}</p>
-                                        <button onClick={(e) => { e.stopPropagation(); store.setConversationHistory(store.conversationHistory.filter((_, idx) => idx !== i)) }} className="text-xs text-muted hover:text-red-400">X</button>
+                                        <button onClick={(e) => { e.stopPropagation(); store.setConversationHistory(store.conversationHistory.filter((_, idx) => idx !== i)) }} className="text-xs text-muted hover:text-red-400">
+                                            <XCircle className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 ))}
                             </div>
@@ -590,16 +685,20 @@ export default function App(){
                   <div className="text-sm font-semibold">Output</div>
                   {store.streaming && (
                     <div className="flex items-center gap-2 text-muted">
-                      <div className="h-4 w-4 rounded-full border-2 border-neutral-500 border-t-transparent animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin text-accent" />
                       <span className="text-sm">Generating…</span>
                     </div>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
                   {store.streaming && (
-                    <button onClick={store.stopStream} className="bg-red-700 border border-red-600 rounded-md px-3 py-2 text-sm hover:bg-red-600">Stop</button>
+                    <button onClick={store.stopStream} className="bg-red-700 border border-red-600 rounded-md px-3 py-2 text-sm hover:bg-red-600 flex items-center gap-1">
+                      <XCircle className="w-4 h-4" /> Stop
+                    </button>
                   )}
-                  <button onClick={() => document.execCommand('copy')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700">Copy</button>
+                  <button onClick={() => document.execCommand('copy')} className="bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm hover:bg-neutral-700 flex items-center gap-1">
+                    <ClipboardCopy className="w-4 h-4" /> Copy
+                  </button>
                 </div>
               </div>
               <div ref={outRef} className="p-4 text-ink space-y-2 overflow-auto flex-1 md" dangerouslySetInnerHTML={{__html: store.out}} />

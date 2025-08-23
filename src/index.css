@@ -34,9 +34,9 @@ body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helveti
 }
 .md pre {
   background: #2d2d2d;
-  padding: 0; /* Remove padding for container */
+  padding: 0;
   border-radius: .5rem;
-  overflow: hidden; /* To keep code block styles contained */
+  overflow: hidden;
 }
 .md pre > code {
   display: block;
@@ -94,7 +94,7 @@ body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helveti
   right: 0.5rem;
   display: flex;
   gap: 0.5rem;
-  opacity: 0; /* Hidden by default */
+  opacity: 0;
   transition: opacity 0.2s ease-in-out;
   z-index: 10;
 }
@@ -112,6 +112,9 @@ body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helveti
   font-size: 0.75rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .code-btn:hover {
@@ -207,44 +210,4 @@ body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helveti
 .gutter.gutter-horizontal {
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bM/58zZ478BwVgyJGeoAmf24f3sT2uR2EACADsD/w6f926nAAAAABJRU5ErkJggg==');
     cursor: col-resize;
-}
-
-/* NEW: Chat UI Styles */
-.chat-message {
-  padding: 1rem;
-  border-bottom: 1px solid var(--line);
-}
-
-.chat-message.user {
-  background-color: #2a2a2a;
-}
-
-.chat-message.model {
-  background-color: transparent;
-}
-
-.chat-message:last-child {
-  border-bottom: none;
-}
-
-.chat-input-area {
-  border-top: 1px solid var(--line);
-  padding: 1rem;
-  background-color: #212121;
-}
-
-.chat-input {
-  width: 100%;
-  background: #2d2d2d;
-  border: 1px solid #4a4a4a;
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  color: var(--ink);
-  resize: none;
-}
-
-.chat-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }
