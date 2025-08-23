@@ -369,23 +369,21 @@ export default function App(){
       store.setProjectFiles(fileData);
   }
 
-  function onOpenFile(e){
-    const file = e.target.files?.[0]
-    if(!file) return
-    const reader = new FileReader()
+  async function onOpenFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
     reader.onload = () => {
-      const newContent = String(reader.result);
-      store.updateEditorValue(newContent, true)
-      const ext = (file.name.split('.').pop()||'').toLowerCase()
-      // Updated mapping to support new languages from store
-      const map = LANGS.reduce((acc, l) => {
-        acc[l.id] = l.id;
-        l.aliases?.forEach(a => acc[a] = l.id);
-        return acc;
-      }, {});
-      store.setLang(map[ext] || 'javascript')
-    }
-    reader.readAsText(file)
+      const fileData = [{
+        path: file.name,
+        content: reader.result
+      }];
+      // Set the single file as a project file
+      // This will trigger language detection via setActiveFile in the store
+      store.setProjectFiles(fileData);
+    };
+    reader.readAsText(file);
   }
 
   function saveFile(){
